@@ -36,7 +36,22 @@ export const images = {
   inspect: (id: string) => podmanRequest(`/images/${encodeURIComponent(id)}/json`),
   remove: (id: string, force: boolean) =>
     podmanRequest(`/images/${encodeURIComponent(id)}`, { method: 'DELETE', query: { force } }),
-  prune: () => podmanRequest('/images/prune', { method: 'POST' }),
+  /**
+   * Prune images. By default only dangling (untagged) images are removed; with
+   * `all` set, every image not referenced by a container is removed too. An
+   * optional `until` age filter (e.g. "24h", "2025-01-01T00:00:00") limits
+   * removal to images created before that point.
+   */
+  prune: (options: { all?: boolean; until?: string } = {}) => {
+    const filters: Record<string, string[]> = {};
+    if (options.all) filters.dangling = ['false'];
+    if (options.until) filters.until = [options.until];
+    const query = Object.keys(filters).length ? { filters: JSON.stringify(filters) } : undefined;
+    return podmanRequest<{ ImagesDeleted?: Array<{ Deleted?: string; Untagged?: string }> | null; SpaceReclaimed?: number }>(
+      '/images/prune',
+      { method: 'POST', query },
+    );
+  },
   /** Returns the streaming pull progress (newline-delimited JSON). */
   pull: (reference: string) => {
     const [fromImage, tag] = splitReference(reference);

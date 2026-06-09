@@ -24,6 +24,7 @@ export default function ImagesPage() {
     refreshInterval: 10000,
   });
   const [pullOpen, setPullOpen] = useState(false);
+  const [pruneOpen, setPruneOpen] = useState(false);
 
   async function removeImage(img: ImageSummary) {
     const tag = img.RepoTags?.[0] ?? img.Id.slice(7, 19);
@@ -38,18 +39,6 @@ export default function ImagesPage() {
     }
   }
 
-  async function prune() {
-    const ok = await confirm({ title: 'Prune images', message: 'Remove all dangling images?', confirmLabel: 'Prune' });
-    if (!ok) return;
-    try {
-      await api('/api/images/prune', { method: 'POST' });
-      toast.success('Dangling images pruned');
-      mutate();
-    } catch (err) {
-      toast.error(err instanceof ApiClientError ? err.message : 'Failed to prune');
-    }
-  }
-
   const isOperator = can(user.role, 'operator');
   const isAdmin = can(user.role, 'admin');
 
@@ -61,7 +50,7 @@ export default function ImagesPage() {
         actions={
           <>
             {isOperator && (
-              <button className="btn-ghost" onClick={prune}>
+              <button className="btn-ghost" onClick={() => setPruneOpen(true)}>
                 <Eraser size={15} /> Prune
               </button>
             )}
@@ -75,6 +64,7 @@ export default function ImagesPage() {
       />
       {dialog}
       <PullDialog open={pullOpen} onClose={() => setPullOpen(false)} onDone={() => mutate()} />
+      <PruneDialog open={pruneOpen} onClose={() => setPruneOpen(false)} onDone={() => mutate()} />
 
       {error ? (
         <ErrorState message={(error as Error).message} />
@@ -220,6 +210,96 @@ function PullDialog({ open, onClose, onDone }: { open: boolean; onClose: () => v
           ))}
         </div>
       )}
+    </Modal>
+  );
+}
+
+type PruneScope = 'dangling' | 'all';
+
+function PruneDialog({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const [scope, setScope] = useState<PruneScope>('dangling');
+  const [until, setUntil] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    setBusy(true);
+    try {
+      const params = new URLSearchParams();
+      if (scope === 'all') params.set('all', 'true');
+      if (until.trim()) params.set('until', until.trim());
+      const res = await api<{ deleted: number; spaceReclaimed: number }>(
+        `/api/images/prune?${params.toString()}`,
+        { method: 'POST' },
+      );
+      toast.success(
+        res.deleted > 0
+          ? `Removed ${res.deleted} image${res.deleted === 1 ? '' : 's'}, reclaimed ${bytes(res.spaceReclaimed)}`
+          : 'Nothing to prune',
+      );
+      onClose();
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof ApiClientError ? err.message : 'Failed to prune');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={busy ? () => {} : onClose}
+      title="Prune images"
+      footer={
+        <>
+          <button className="btn-ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button className={scope === 'all' ? 'btn-danger' : 'btn-primary'} onClick={run} disabled={busy}>
+            {busy ? <Spinner size={14} /> : <Eraser size={15} />} Prune
+          </button>
+        </>
+      }
+    >
+      <fieldset className="space-y-2">
+        <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-3 hover:bg-bg-hover">
+          <input
+            type="radio"
+            name="prune-scope"
+            className="mt-1"
+            checked={scope === 'dangling'}
+            onChange={() => setScope('dangling')}
+          />
+          <span>
+            <span className="block text-sm font-medium text-gray-100">Dangling images only</span>
+            <span className="block text-xs text-muted">Untagged layers left over from rebuilds. Safe.</span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-3 hover:bg-bg-hover">
+          <input
+            type="radio"
+            name="prune-scope"
+            className="mt-1"
+            checked={scope === 'all'}
+            onChange={() => setScope('all')}
+          />
+          <span>
+            <span className="block text-sm font-medium text-gray-100">All unused images</span>
+            <span className="block text-xs text-muted">
+              Every image not referenced by a container. They must be pulled/built again to reuse.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+      <label className="label mt-4">Only images older than (optional)</label>
+      <input
+        className="input"
+        placeholder="e.g. 24h, 168h, or 2025-01-01T00:00:00"
+        value={until}
+        onChange={(e) => setUntil(e.target.value)}
+        disabled={busy}
+      />
     </Modal>
   );
 }

@@ -272,12 +272,20 @@ function RecentEvents() {
     <ul className="space-y-1.5 text-sm">
       {rows.map((r) => (
         <li key={r.k} className="flex items-center gap-2">
-          <span className="w-14 shrink-0 font-mono text-xs text-muted">
+          <span className="w-14 shrink-0 font-mono text-[11px] text-muted">
             {new Date(r.t).toLocaleTimeString(undefined, { hour12: false }).slice(0, 8)}
           </span>
-          <span className="shrink-0 text-xs text-muted">{r.type}</span>
-          <span className="font-medium text-gray-200">{r.action}</span>
-          <span className="ml-auto truncate text-xs text-muted">{r.name}</span>
+          <span className="w-16 shrink-0 truncate text-xs text-muted" title={r.type}>
+            {r.type}
+          </span>
+          <span className="min-w-0 flex-1 truncate font-medium text-gray-200" title={r.action}>
+            {r.action}
+          </span>
+          {r.name && (
+            <span className="max-w-[28%] shrink-0 truncate text-xs text-muted" title={r.name}>
+              {r.name}
+            </span>
+          )}
         </li>
       ))}
     </ul>

@@ -119,7 +119,11 @@ export default function EventsPage() {
                   <td className="td">
                     <span className={typeBadge(r.type)}>{r.type}</span>
                   </td>
-                  <td className="td font-medium text-gray-200">{r.action}</td>
+                  <td className="td">
+                    <div className="max-w-[28rem] truncate font-medium text-gray-200" title={r.action}>
+                      {r.action}
+                    </div>
+                  </td>
                   <td className="td">
                     <span className="text-gray-300">{r.name || '—'}</span>
                     {r.id && <span className="ml-2 font-mono text-xs text-muted">{r.id}</span>}

@@ -49,6 +49,14 @@ docker run -d --name peaport -p 3000:3000 \
   -v peaport-data:/app/data \
   ghcr.io/gren-95/peaport:latest
 ```
+
+Or with Compose — [`examples/compose.yaml`](examples/compose.yaml):
+
+```bash
+export SESSION_SECRET=$(openssl rand -hex 48)
+export DOCKER_GID=$(getent group docker | cut -d: -f3)
+docker compose -f examples/compose.yaml up -d
+```
 </details>
 
 Useful flags / overrides:

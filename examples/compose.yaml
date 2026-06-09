@@ -1,0 +1,43 @@
+# Run Peaport from the prebuilt image — no clone or build required.
+#
+#   export SESSION_SECRET=$(openssl rand -hex 48)
+#   export DOCKER_GID=$(getent group docker | cut -d: -f3)
+#   docker compose -f examples/compose.yaml up -d        # or: podman-compose
+#
+# Then open http://localhost:3000 (you'll set a password on first login).
+# Values can also be placed in a .env file next to this compose file.
+
+services:
+  peaport:
+    image: ghcr.io/gren-95/peaport:latest
+    container_name: peaport
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    # Lets the non-root container user reach a root:docker-owned socket.
+    # Not needed for rootless Podman (drop this and see the socket note below).
+    group_add:
+      - "${DOCKER_GID:?set DOCKER_GID=$(getent group docker | cut -d: -f3)}"
+    environment:
+      # REQUIRED — generate with: openssl rand -hex 48
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET (openssl rand -hex 48)}
+      # Optional but recommended: a dedicated key for encrypting stored secrets.
+      SECRETS_KEY: ${SECRETS_KEY:-}
+      # Bootstrap admin (first run only); a password change is forced on first login.
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      # Set to true when serving over HTTPS (behind a TLS reverse proxy).
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # Inside the container the engine socket is always mounted at this path.
+      PODMAN_SOCKET_PATH: /var/run/docker.sock
+    volumes:
+      # Engine socket. Swap the host side for your engine:
+      #   Docker:           /var/run/docker.sock
+      #   Rootful Podman:   /run/podman/podman.sock
+      #   Rootless Podman:  ${XDG_RUNTIME_DIR}/podman/podman.sock
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persisted SQLite database (users, sessions, stacks, secrets, audit).
+      - peaport-data:/app/data
+
+volumes:
+  peaport-data:

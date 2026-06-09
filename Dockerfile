@@ -3,7 +3,7 @@
 # ---- builder: install deps (bun) and produce the Next.js build ----
 # Use the same Debian base (bookworm) as the runner so the native
 # better-sqlite3 binary links against a matching glibc.
-FROM node:22-bookworm-slim AS builder
+FROM node:26-bookworm-slim AS builder
 WORKDIR /app
 
 # Build toolchain (for native modules) + bun as the package manager.
@@ -30,7 +30,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN bunx next build
 
 # ---- runner: minimal Node.js runtime (server.js needs Node) ----
-FROM node:22-bookworm-slim AS runner
+FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 
 # nmcli (NetworkManager CLI) powers best-effort static/DHCP detection for the

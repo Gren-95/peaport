@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@config '../../tailwind.config.ts';
 
 :root {
   --font-mono: ui-monospace, 'SFMono-Regular', 'JetBrains Mono', 'Menlo', monospace;
@@ -25,19 +24,22 @@
 }
 
 @layer components {
-  .btn {
+  .btn,
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger {
     @apply inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium
       transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none
       focus:ring-2 focus:ring-accent/50;
   }
   .btn-primary {
-    @apply btn bg-accent text-white hover:bg-accent-soft;
+    @apply bg-accent text-white hover:bg-accent-soft;
   }
   .btn-ghost {
-    @apply btn border border-border bg-transparent text-gray-300 hover:bg-bg-hover;
+    @apply border border-border bg-transparent text-gray-300 hover:bg-bg-hover;
   }
   .btn-danger {
-    @apply btn bg-danger/90 text-white hover:bg-danger;
+    @apply bg-danger/90 text-white hover:bg-danger;
   }
   .btn-xs {
     @apply px-2 py-1 text-xs;
@@ -55,20 +57,24 @@
     @apply mb-1 block text-xs font-medium uppercase tracking-wide text-muted;
   }
 
-  .badge {
+  .badge,
+  .badge-ok,
+  .badge-warn,
+  .badge-danger,
+  .badge-muted {
     @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
   }
   .badge-ok {
-    @apply badge bg-ok/15 text-ok;
+    @apply bg-ok/15 text-ok;
   }
   .badge-warn {
-    @apply badge bg-warn/15 text-warn;
+    @apply bg-warn/15 text-warn;
   }
   .badge-danger {
-    @apply badge bg-danger/15 text-danger;
+    @apply bg-danger/15 text-danger;
   }
   .badge-muted {
-    @apply badge bg-border text-muted;
+    @apply bg-border text-muted;
   }
 
   .th {

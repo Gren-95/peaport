@@ -49,7 +49,7 @@ export const createVolumeSchema = z.object({
     .max(128)
     .regex(/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/, 'Invalid volume name.'),
   driver: z.string().trim().max(64).optional(),
-  labels: z.record(z.string()).optional(),
+  labels: z.record(z.string(), z.string()).optional(),
 });
 
 export const createNetworkSchema = z.object({

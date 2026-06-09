@@ -5,6 +5,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { CSRF_HEADER, SESSION_COOKIE, safeEqual, validateSession, type ValidatedSession } from '@/lib/auth';
 import { PodmanError } from '@/lib/podman';
+import { recordAudit } from '@/lib/audit';
+import { clientIp } from '@/lib/net';
 import type { ApiError, Role, SessionUser } from '@/types';
 
 const ROLE_RANK: Record<Role, number> = { viewer: 1, operator: 2, admin: 3 };
@@ -58,14 +60,17 @@ export function withAuth(handler: Handler, options: GuardOptions = {}) {
     req: NextRequest,
     routeCtx: { params: Promise<Record<string, string>> },
   ): Promise<NextResponse> => {
-    try {
+    const mutating = MUTATING.has(req.method);
+    let validated: ValidatedSession | null = null;
+
+    const handle = async (): Promise<NextResponse> => {
       const sessionId = req.cookies.get(SESSION_COOKIE)?.value;
-      const validated = validateSession(sessionId);
+      validated = validateSession(sessionId);
       if (!validated) {
         return fail({ code: 'AUTH_REQUIRED', message: 'Authentication required.' }, 401);
       }
 
-      if (MUTATING.has(req.method)) {
+      if (mutating) {
         const token = req.headers.get(CSRF_HEADER);
         if (!token || !safeEqual(token, validated.session.csrf_token)) {
           return fail({ code: 'CSRF_INVALID', message: 'Missing or invalid CSRF token.' }, 403);
@@ -81,10 +86,29 @@ export function withAuth(handler: Handler, options: GuardOptions = {}) {
       }
 
       const params = (await routeCtx?.params) ?? {};
-      return await handler({ user: validated.user, session: validated.session, req, params });
+      return handler({ user: validated.user, session: validated.session, req, params });
+    };
+
+    let res: NextResponse;
+    try {
+      res = await handle();
     } catch (err) {
-      return toErrorResponse(err);
+      res = toErrorResponse(err);
     }
+
+    // Audit every mutating request (including blocked attempts).
+    if (mutating) {
+      const session = validated as ValidatedSession | null;
+      recordAudit({
+        username: session?.user.username ?? null,
+        role: session?.user.role ?? null,
+        method: req.method,
+        path: req.nextUrl.pathname,
+        status: res.status,
+        ip: clientIp(req),
+      });
+    }
+    return res;
   };
 }
 

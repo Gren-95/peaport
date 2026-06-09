@@ -22,6 +22,8 @@ export function isPodAction(value: string): value is PodAction {
 export const containers = {
   list: (all = true) => podmanRequest<ContainerSummary[]>('/containers/json', { query: { all } }),
   inspect: (id: string) => podmanRequest(`/containers/${encodeURIComponent(id)}/json`),
+  create: (name: string | undefined, body: unknown) =>
+    podmanRequest<{ Id: string }>('/containers/create', { method: 'POST', query: name ? { name } : undefined, body }),
   top: (id: string) => podmanRequest(`/containers/${encodeURIComponent(id)}/top`),
   action: (id: string, action: ContainerAction) =>
     podmanRequest(`/containers/${encodeURIComponent(id)}/${action}`, { method: 'POST' }),

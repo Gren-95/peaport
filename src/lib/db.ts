@@ -85,7 +85,38 @@ function migrate(database: Database.Database): void {
       created_at  INTEGER NOT NULL,
       updated_at  INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts          INTEGER NOT NULL,
+      username    TEXT,
+      role        TEXT,
+      method      TEXT NOT NULL,
+      path        TEXT NOT NULL,
+      action      TEXT NOT NULL,
+      status      INTEGER NOT NULL,
+      outcome     TEXT NOT NULL,
+      ip          TEXT,
+      detail      TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(username);
   `);
+}
+
+export interface AuditRow {
+  id: number;
+  ts: number;
+  username: string | null;
+  role: string | null;
+  method: string;
+  path: string;
+  action: string;
+  status: number;
+  outcome: string;
+  ip: string | null;
+  detail: string | null;
 }
 
 export interface SecretRow {

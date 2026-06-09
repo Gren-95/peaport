@@ -9,6 +9,7 @@ import {
 } from '@/lib/auth';
 import { loginSchema } from '@/lib/validation';
 import { rateLimit } from '@/lib/ratelimit';
+import { recordAudit } from '@/lib/audit';
 import { clientIp, sessionCookie } from '@/lib/net';
 
 export const runtime = 'nodejs';
@@ -43,9 +44,11 @@ export async function POST(req: NextRequest) {
       : (await verifyPassword(password, await dummyHash()), false);
 
     if (!row || !valid) {
+      recordAudit({ username, role: null, method: 'POST', path: '/api/auth/login', status: 401, ip });
       return fail({ code: 'AUTH_INVALID', message: 'Invalid credentials.' }, 401);
     }
 
+    recordAudit({ username: row.username, role: row.role, method: 'POST', path: '/api/auth/login', status: 200, ip });
     const { id, csrfToken } = createSession(row.id, ip, req.headers.get('user-agent'));
     const res = ok({
       user: { id: row.id, username: row.username, role: row.role },

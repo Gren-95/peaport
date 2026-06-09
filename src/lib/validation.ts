@@ -67,6 +67,27 @@ export const execSchema = z.object({
   cmd: z.array(z.string()).min(1).max(64),
 });
 
+export const createContainerSchema = z.object({
+  image: z.string().trim().min(1, 'Image is required.').max(512),
+  name: z
+    .string()
+    .trim()
+    .max(128)
+    .regex(/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/, 'Invalid container name.')
+    .optional()
+    .or(z.literal('')),
+  command: z.string().max(4000).optional(),
+  env: z.array(z.string().max(4000)).max(200).optional(),
+  ports: z.array(z.string().trim().max(64)).max(100).optional(),
+  volumes: z.array(z.string().trim().max(512)).max(100).optional(),
+  network: z.string().trim().max(128).optional(),
+  restartPolicy: z.enum(['no', 'always', 'unless-stopped', 'on-failure']).optional(),
+  tty: z.boolean().optional(),
+  privileged: z.boolean().optional(),
+  autoRemove: z.boolean().optional(),
+  start: z.boolean().optional(),
+});
+
 // Compose project names must be lowercase and start with a letter or digit.
 const stackName = z
   .string()

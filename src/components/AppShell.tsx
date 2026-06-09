@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  Activity,
   Boxes,
   Container,
   HardDrive,
@@ -13,6 +14,7 @@ import {
   LayoutDashboard,
   LogOut,
   Network,
+  ScrollText,
   Settings,
   Users,
 } from 'lucide-react';
@@ -45,6 +47,8 @@ const NAV: { href: string; label: string; icon: typeof Container; minRole?: Role
   { href: '/networks', label: 'Networks', icon: Network },
   { href: '/pods', label: 'Pods', icon: Boxes },
   { href: '/secrets', label: 'Secrets', icon: KeyRound, minRole: 'operator' },
+  { href: '/events', label: 'Events', icon: Activity },
+  { href: '/audit', label: 'Audit', icon: ScrollText, minRole: 'admin' },
   { href: '/users', label: 'Users', icon: Users, minRole: 'admin' },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];

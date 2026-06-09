@@ -22,7 +22,7 @@ jobs:
       - name: Typecheck
         run: bunx tsc --noEmit
       - name: Unit tests
-        run: bun test
+        run: bun run test
       - name: Build
         run: bunx next build
         env:

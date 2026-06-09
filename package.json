@@ -10,7 +10,7 @@
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test tests",
     "test:e2e": "next build && playwright test"
   },
   "dependencies": {

@@ -1,13 +1,16 @@
 # syntax=docker/dockerfile:1
 
 # ---- builder: install deps (bun) and produce the Next.js build ----
-FROM oven/bun:1 AS builder
+# Use the same Debian base (bookworm) as the runner so the native
+# better-sqlite3 binary links against a matching glibc.
+FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
-# Build toolchain in case a native module needs to compile from source.
+# Build toolchain (for native modules) + bun as the package manager.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
+  && apt-get install -y --no-install-recommends python3 make g++ unzip ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && npm install -g bun@1
 
 # Install dependencies first for better layer caching.
 COPY package.json bun.lock ./

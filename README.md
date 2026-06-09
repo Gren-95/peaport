@@ -161,3 +161,8 @@ src/
   middleware.ts           # security headers + auth gate
 data/                     # SQLite database (gitignored, mount as a volume)
 ```
+
+## License
+
+Peaport is free software licensed under the **GNU General Public License v3.0
+or later** (GPL-3.0-or-later). See [LICENSE](LICENSE) for the full text.

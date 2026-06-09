@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
+import { Download } from 'lucide-react';
 import { swrFetcher } from '@/lib/client';
 import { useSession } from '@/components/AppShell';
 import { EmptyState, ErrorState, PageHeader, Spinner } from '@/components/ui';
@@ -55,18 +56,23 @@ export default function AuditPage() {
         title="Audit log"
         subtitle={`${total} recorded action${total === 1 ? '' : 's'}`}
         actions={
-          <select
-            className="rounded-md border border-border bg-bg-soft px-2 py-1.5 text-sm text-gray-200"
-            value={outcome}
-            onChange={(e) => {
-              setOutcome(e.target.value as '' | 'success' | 'failure');
-              setOffset(0);
-            }}
-          >
-            <option value="">All outcomes</option>
-            <option value="success">Success</option>
-            <option value="failure">Failure</option>
-          </select>
+          <>
+            <select
+              className="rounded-md border border-border bg-bg-soft px-2 py-1.5 text-sm text-gray-200"
+              value={outcome}
+              onChange={(e) => {
+                setOutcome(e.target.value as '' | 'success' | 'failure');
+                setOffset(0);
+              }}
+            >
+              <option value="">All outcomes</option>
+              <option value="success">Success</option>
+              <option value="failure">Failure</option>
+            </select>
+            <a className="btn-ghost" href="/api/audit/export" download>
+              <Download size={15} /> Export
+            </a>
+          </>
         }
       />
 

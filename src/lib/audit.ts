@@ -68,24 +68,40 @@ export function describeAction(method: string, path: string): string {
 }
 
 export function recordAudit(entry: AuditEntry): void {
+  const ts = Date.now();
+  const action = describeAction(entry.method, entry.path);
+  const outcome = entry.status < 400 ? 'success' : 'failure';
+
+  // Mirror to stdout as a structured line so an external log collector can ship
+  // audit events to an isolated store, independent of the application database.
+  try {
+    // eslint-disable-next-line no-console
+    console.log(
+      JSON.stringify({
+        ts: new Date(ts).toISOString(),
+        level: outcome === 'success' ? 'info' : 'warn',
+        kind: 'audit',
+        user: entry.username,
+        role: entry.role,
+        action,
+        method: entry.method,
+        path: entry.path,
+        status: entry.status,
+        outcome,
+        ip: entry.ip,
+      }),
+    );
+  } catch {
+    /* ignore */
+  }
+
   try {
     getDb()
       .prepare(
         `INSERT INTO audit_log (ts, username, role, method, path, action, status, outcome, ip, detail)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(
-        Date.now(),
-        entry.username,
-        entry.role,
-        entry.method,
-        entry.path,
-        describeAction(entry.method, entry.path),
-        entry.status,
-        entry.status < 400 ? 'success' : 'failure',
-        entry.ip,
-        entry.detail ?? null,
-      );
+      .run(ts, entry.username, entry.role, entry.method, entry.path, action, entry.status, outcome, entry.ip, entry.detail ?? null);
   } catch {
     // Never let audit logging break the request it is recording.
   }

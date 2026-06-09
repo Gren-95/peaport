@@ -141,7 +141,12 @@ bun run start       # run the production build
 bun run typecheck   # tsc --noEmit
 bun run lint        # next lint
 bun run test        # unit tests (bun test) — rbac, crypto, auth, audit, container spec
+bun run test:e2e    # Playwright E2E (golden path) — needs the engine socket + `playwright install chromium`
 ```
+
+The E2E test boots a production build on a throwaway port/database pointed at the
+engine socket, then drives a browser through: forced first-login password change →
+pull `hello-world` → run it → assert its logs → remove it.
 
 ## Project layout
 

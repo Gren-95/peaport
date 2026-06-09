@@ -13,6 +13,12 @@
 /data/*
 !/data/.gitkeep
 
+# e2e
+/.e2e-data
+/test-results
+/playwright-report
+/blob-report
+
 # env files
 .env
 .env.local

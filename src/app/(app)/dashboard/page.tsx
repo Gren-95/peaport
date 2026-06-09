@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
-import { Activity, Boxes, Container, Cpu, HardDrive, Image as ImageIcon, Layers, MemoryStick, Network } from 'lucide-react';
+import { Activity, AlertTriangle, Boxes, Container, Cpu, HardDrive, Heart, Image as ImageIcon, Layers, Network, Plug } from 'lucide-react';
 import { swrFetcher } from '@/lib/client';
 import { PageHeader, Spinner, bytes } from '@/components/ui';
 import type { ContainerSummary, StackStatus } from '@/types';
@@ -19,9 +19,15 @@ interface SystemData {
     KernelVersion?: string;
     Architecture?: string;
     Driver?: string;
+    Warnings?: string[] | null;
   } | null;
   version: { Version?: string; ApiVersion?: string } | null;
-  df: { Images?: { Size?: number }[]; Containers?: { SizeRw?: number }[]; Volumes?: { UsageData?: { Size?: number } }[]; BuildCache?: { Size?: number }[] } | null;
+  df: {
+    Images?: { Size?: number }[];
+    Containers?: { SizeRw?: number }[];
+    Volumes?: { Name?: string; UsageData?: { Size?: number } }[];
+    BuildCache?: { Size?: number }[];
+  } | null;
 }
 interface Usage {
   containers: { id: string; name: string; cpu: number; mem: number; memLimit: number }[];
@@ -52,6 +58,50 @@ export default function DashboardPage() {
   const memUsedPct = memTotal ? (usage?.totals.mem ?? 0) / memTotal * 100 : 0;
   const cpuPct = system?.info?.NCPU ? (usage?.totals.cpu ?? 0) / system.info.NCPU : usage?.totals.cpu ?? 0;
 
+  // Keep a short rolling history of usage samples for the sparklines.
+  const [cpuHist, setCpuHist] = useState<number[]>([]);
+  const [memHist, setMemHist] = useState<number[]>([]);
+  useEffect(() => {
+    if (!usage) return;
+    setCpuHist((h) => [...h, cpuPct].slice(-40));
+    setMemHist((h) => [...h, usage.totals.mem].slice(-40));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usage]);
+
+  // Containers needing attention: unhealthy, or exited with a non-zero code.
+  const attention = cs
+    .map((c) => {
+      const status = c.Status ?? '';
+      if (/\(unhealthy\)/i.test(status)) return { c, reason: 'unhealthy', danger: false };
+      const exit = status.match(/^Exited \((\d+)\)/);
+      if (exit && exit[1] !== '0') return { c, reason: `exited (${exit[1]})`, danger: true };
+      return null;
+    })
+    .filter(Boolean) as { c: ContainerSummary; reason: string; danger: boolean }[];
+
+  // Published host ports across all containers.
+  const ports = cs
+    .flatMap((c) =>
+      (c.Ports ?? [])
+        .filter((p) => p.PublicPort)
+        .map((p) => ({
+          id: c.Id,
+          name: c.Names?.[0]?.replace(/^\//, '') ?? c.Id.slice(0, 12),
+          host: p.PublicPort!,
+          container: p.PrivatePort,
+          proto: p.Type ?? 'tcp',
+          ip: p.IP && p.IP !== '0.0.0.0' && p.IP !== '::' ? p.IP : null,
+        })),
+    )
+    .sort((a, b) => a.host - b.host);
+
+  const topVolumes = [...(system?.df?.Volumes ?? [])]
+    .filter((v) => (v.UsageData?.Size ?? 0) > 0)
+    .sort((a, b) => (b.UsageData?.Size ?? 0) - (a.UsageData?.Size ?? 0))
+    .slice(0, 5);
+
+  const warnings = system?.info?.Warnings ?? [];
+
   const disk = system?.df
     ? {
         images: sum((system.df.Images ?? []).map((i) => i.Size)),
@@ -73,6 +123,19 @@ export default function DashboardPage() {
   return (
     <div>
       <PageHeader title="Dashboard" subtitle="Engine overview, live usage, and activity" />
+
+      {warnings.length > 0 && (
+        <div className="mb-4 rounded-lg border border-warn/30 bg-warn/10 p-3">
+          <div className="mb-1 flex items-center gap-2 text-sm font-medium text-warn">
+            <AlertTriangle size={16} /> Engine warnings ({warnings.length})
+          </div>
+          <ul className="ml-6 list-disc space-y-0.5 text-xs text-gray-300">
+            {warnings.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         {stats.map((s) => {
@@ -97,6 +160,16 @@ export default function DashboardPage() {
           <Gauge label="CPU" value={`${cpuPct.toFixed(1)}%`} pct={cpuPct} />
           <div className="mt-3">
             <Gauge label="Memory" value={`${bytes(usage?.totals.mem ?? 0)}${memTotal ? ` / ${bytes(memTotal)}` : ''}`} pct={memUsedPct} />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <div className="mb-1 text-[11px] uppercase tracking-wide text-muted">CPU trend</div>
+              <Sparkline data={cpuHist} max={100} color="#7c5cff" />
+            </div>
+            <div>
+              <div className="mb-1 text-[11px] uppercase tracking-wide text-muted">Memory trend</div>
+              <Sparkline data={memHist} max={memTotal || undefined} color="#3ecf8e" />
+            </div>
           </div>
           <div className="mt-4">
             <div className="mb-1 text-xs uppercase tracking-wide text-muted">Top by memory</div>
@@ -140,6 +213,68 @@ export default function DashboardPage() {
                 <span>Total</span>
                 <span>{bytes(disk.images + disk.containers + disk.volumes + disk.buildCache)}</span>
               </li>
+            </ul>
+          )}
+          {topVolumes.length > 0 && (
+            <div className="mt-4 border-t border-border pt-3">
+              <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide text-muted">
+                <span>Largest volumes</span>
+                <Link href="/volumes" className="hover:text-accent">manage</Link>
+              </div>
+              <ul className="space-y-1 text-sm">
+                {topVolumes.map((v) => (
+                  <li key={v.Name} className="flex justify-between gap-2">
+                    <span className="truncate text-gray-300" title={v.Name}>{v.Name}</span>
+                    <span className="shrink-0 font-mono text-xs text-muted">{bytes(v.UsageData?.Size)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Attention + published ports */}
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="card p-5">
+          <CardTitle
+            icon={Heart}
+            title="Needs attention"
+            hint={attention.length === 0 ? 'all good' : `${attention.length} issue${attention.length === 1 ? '' : 's'}`}
+          />
+          {attention.length === 0 ? (
+            <p className="text-sm text-muted">No unhealthy or failed containers.</p>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {attention.map(({ c, reason, danger }) => (
+                <li key={c.Id} className="flex items-center justify-between gap-2">
+                  <Link href={`/containers/${c.Id}`} className="truncate text-gray-100 hover:text-accent">
+                    {c.Names?.[0]?.replace(/^\//, '') ?? c.Id.slice(0, 12)}
+                  </Link>
+                  <span className={danger ? 'badge-danger' : 'badge-warn'}>{reason}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="card p-5">
+          <CardTitle icon={Plug} title="Published ports" hint={`${ports.length} exposed`} />
+          {ports.length === 0 ? (
+            <p className="text-sm text-muted">No published ports.</p>
+          ) : (
+            <ul className="max-h-56 space-y-1 overflow-auto text-sm">
+              {ports.map((p, i) => (
+                <li key={`${p.id}-${p.host}-${i}`} className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs text-gray-200">
+                    {p.ip ? `${p.ip}:` : ''}
+                    {p.host} <span className="text-muted">→ {p.container}/{p.proto}</span>
+                  </span>
+                  <Link href={`/containers/${p.id}`} className="truncate text-xs text-muted hover:text-accent">
+                    {p.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           )}
         </div>
@@ -260,6 +395,21 @@ function CardTitle({ icon: Icon, title, hint }: { icon: typeof Cpu; title: strin
       </div>
       {hint && <span className="text-xs text-muted">{hint}</span>}
     </div>
+  );
+}
+
+function Sparkline({ data, max, color }: { data: number[]; max?: number; color: string }) {
+  if (data.length < 2) return <div className="flex h-8 items-center text-[11px] text-muted">collecting…</div>;
+  const w = 100;
+  const h = 28;
+  const peak = max || Math.max(...data, 1);
+  const points = data
+    .map((v, i) => `${(i / (data.length - 1)) * w},${h - Math.min(1, v / peak) * h}`)
+    .join(' ');
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-8 w-full" preserveAspectRatio="none">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
   );
 }
 

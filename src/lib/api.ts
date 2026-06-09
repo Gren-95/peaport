@@ -7,13 +7,10 @@ import { CSRF_HEADER, SESSION_COOKIE, safeEqual, validateSession, type Validated
 import { PodmanError } from '@/lib/podman';
 import { recordAudit } from '@/lib/audit';
 import { clientIp } from '@/lib/net';
+import { hasRole } from '@/lib/rbac';
 import type { ApiError, Role, SessionUser } from '@/types';
 
-const ROLE_RANK: Record<Role, number> = { viewer: 1, operator: 2, admin: 3 };
-
-export function hasRole(user: SessionUser, required: Role): boolean {
-  return ROLE_RANK[user.role] >= ROLE_RANK[required];
-}
+export { hasRole };
 
 export function ok<T>(data: T, init?: ResponseInit): NextResponse {
   return NextResponse.json({ success: true, data }, init);

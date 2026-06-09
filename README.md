@@ -139,6 +139,7 @@ bun run build       # production build
 bun run start       # run the production build
 bun run typecheck   # tsc --noEmit
 bun run lint        # next lint
+bun run test        # unit tests (bun test) — rbac, crypto, auth, audit, container spec
 ```
 
 ## Project layout

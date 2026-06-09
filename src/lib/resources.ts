@@ -25,6 +25,8 @@ export const containers = {
   create: (name: string | undefined, body: unknown) =>
     podmanRequest<{ Id: string }>('/containers/create', { method: 'POST', query: name ? { name } : undefined, body }),
   top: (id: string) => podmanRequest(`/containers/${encodeURIComponent(id)}/top`),
+  statsOnce: (id: string) =>
+    podmanRequest(`/containers/${encodeURIComponent(id)}/stats`, { query: { stream: false } }),
   action: (id: string, action: ContainerAction) =>
     podmanRequest(`/containers/${encodeURIComponent(id)}/${action}`, { method: 'POST' }),
   remove: (id: string, force: boolean, volumes: boolean) =>

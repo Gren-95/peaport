@@ -200,6 +200,13 @@ export function destroyUserSessions(userId: number): void {
   getDb().prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
 }
 
+/** Revoke all of a user's sessions except the one to keep. Returns the count removed. */
+export function destroyOtherUserSessions(userId: number, keepSessionId: string): number {
+  return getDb()
+    .prepare('DELETE FROM sessions WHERE user_id = ? AND id != ?')
+    .run(userId, keepSessionId).changes;
+}
+
 export function listUserSessions(userId: number): SessionRow[] {
   return getDb()
     .prepare('SELECT * FROM sessions WHERE user_id = ? ORDER BY last_seen_at DESC')

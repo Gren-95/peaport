@@ -2,6 +2,7 @@ import { type NextRequest } from 'next/server';
 import { fail, ok, parseBody, toErrorResponse } from '@/lib/api';
 import {
   createSession,
+  ensureBootstrap,
   getUserRowByUsername,
   hashPassword,
   verifyPassword,
@@ -23,6 +24,7 @@ function dummyHash(): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureBootstrap();
     const ip = clientIp(req);
     const limit = rateLimit(`login:${ip}`, 5, 15 * 60);
     if (!limit.allowed) {

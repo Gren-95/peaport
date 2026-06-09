@@ -209,3 +209,17 @@ export async function bootstrapAdmin(): Promise<void> {
   // eslint-disable-next-line no-console
   console.log(`[panel] Bootstrapped admin user "${username}". Change the password after first login.`);
 }
+
+// Run the bootstrap at most once per process, lazily on the first auth request
+// (kept out of Next instrumentation so the edge runtime never imports the
+// native database driver).
+let bootstrapPromise: Promise<void> | null = null;
+export function ensureBootstrap(): Promise<void> {
+  if (!bootstrapPromise) {
+    bootstrapPromise = bootstrapAdmin().catch((err) => {
+      bootstrapPromise = null; // allow a retry on the next request
+      throw err;
+    });
+  }
+  return bootstrapPromise;
+}

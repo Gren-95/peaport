@@ -15,6 +15,11 @@ const next = require('next');
 const { WebSocketServer } = require('ws');
 
 const dev = process.env.NODE_ENV !== 'production';
+
+// Load .env / .env.local before reading any configuration below, matching how
+// Next loads environment variables internally.
+require('@next/env').loadEnvConfig(process.cwd(), dev);
+
 const port = Number.parseInt(process.env.PORT || '3000', 10);
 const hostname = process.env.HOSTNAME || '0.0.0.0';
 const socketPath = process.env.PODMAN_SOCKET_PATH || '/run/podman/podman.sock';

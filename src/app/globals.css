@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-mono: ui-monospace, 'SFMono-Regular', 'JetBrains Mono', 'Menlo', monospace;
+}
+
+@layer base {
+  html,
+  body {
+    @apply bg-bg text-gray-200 antialiased;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded bg-border;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium
+      transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none
+      focus:ring-2 focus:ring-accent/50;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-white hover:bg-accent-soft;
+  }
+  .btn-ghost {
+    @apply btn border border-border bg-transparent text-gray-300 hover:bg-bg-hover;
+  }
+  .btn-danger {
+    @apply btn bg-danger/90 text-white hover:bg-danger;
+  }
+  .btn-xs {
+    @apply px-2 py-1 text-xs;
+  }
+
+  .card {
+    @apply rounded-lg border border-border bg-bg-card;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-border bg-bg-soft px-3 py-2 text-sm text-gray-100
+      placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-muted;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+  .badge-ok {
+    @apply badge bg-ok/15 text-ok;
+  }
+  .badge-warn {
+    @apply badge bg-warn/15 text-warn;
+  }
+  .badge-danger {
+    @apply badge bg-danger/15 text-danger;
+  }
+  .badge-muted {
+    @apply badge bg-border text-muted;
+  }
+
+  .th {
+    @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+  .td {
+    @apply px-3 py-2 text-sm text-gray-300;
+  }
+  .nav-link {
+    @apply flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-gray-400
+      transition-colors hover:bg-bg-hover hover:text-gray-100;
+  }
+  .nav-link-active {
+    @apply bg-bg-hover text-white;
+  }
+}

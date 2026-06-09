@@ -58,3 +58,47 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
 /** SWR fetcher returning the unwrapped data payload. */
 export const swrFetcher = <T>(path: string): Promise<T> => api<T>(path);
+
+/**
+ * POST to an endpoint that responds with Server-Sent Events and invoke `onLine`
+ * for each `data:` payload. Resolves when the stream ends.
+ */
+export async function streamSsePost(
+  path: string,
+  options: { onLine: (line: string) => void; signal?: AbortSignal },
+): Promise<void> {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'x-csrf-token': csrfToken },
+    signal: options.signal,
+    credentials: 'same-origin',
+  });
+  if (!res.ok || !res.body) {
+    let message = `Request failed (${res.status}).`;
+    try {
+      const body = await res.json();
+      if (body?.error?.message) message = body.error.message;
+    } catch {
+      /* ignore */
+    }
+    throw new ApiClientError('STREAM_ERROR', message, res.status);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const events = buf.split('\n\n');
+    buf = events.pop() ?? '';
+    for (const ev of events) {
+      const data = ev
+        .split('\n')
+        .filter((l) => l.startsWith('data: '))
+        .map((l) => l.slice(6))
+        .join('\n');
+      if (data) options.onLine(data);
+    }
+  }
+}

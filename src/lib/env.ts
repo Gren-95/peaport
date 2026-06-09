@@ -33,8 +33,16 @@ export const env = {
   isProd,
   socketPath: process.env.PODMAN_SOCKET_PATH ?? '/run/podman/podman.sock',
   sessionSecret: sessionSecret || 'insecure-development-secret-do-not-use-in-production',
+  // Dedicated key for encrypting stored secrets. If unset, one is derived from
+  // SESSION_SECRET (rotating SESSION_SECRET then makes stored secrets
+  // undecryptable — set SECRETS_KEY explicitly to decouple them).
+  secretsKey: process.env.SECRETS_KEY ?? '',
   dataDir,
   dbPath: path.join(dataDir, 'panel.db'),
+  stacksDir: path.join(dataDir, 'stacks'),
+  // Compose CLI invocation. Empty = auto-detect ("docker compose" on Docker,
+  // "podman compose" on Podman). Override with e.g. COMPOSE_COMMAND="docker-compose".
+  composeCommand: process.env.COMPOSE_COMMAND ?? '',
   port: int(process.env.PORT, 3000),
   admin: {
     username: process.env.ADMIN_USERNAME ?? 'admin',

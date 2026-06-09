@@ -67,7 +67,43 @@ function migrate(database: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+
+    CREATE TABLE IF NOT EXISTS stacks (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT NOT NULL UNIQUE,
+      content     TEXT NOT NULL,
+      created_by  TEXT,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS secrets (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT NOT NULL UNIQUE,
+      enc         TEXT NOT NULL,
+      created_by  TEXT,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    );
   `);
+}
+
+export interface SecretRow {
+  id: number;
+  name: string;
+  enc: string;
+  created_by: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface StackRow {
+  id: number;
+  name: string;
+  content: string;
+  created_by: string | null;
+  created_at: number;
+  updated_at: number;
 }
 
 /** Remove expired sessions. Called opportunistically on session lookups. */

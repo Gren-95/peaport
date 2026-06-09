@@ -35,6 +35,22 @@ export type ApiResponse<T> =
   | { success: true; data: T }
   | { success: false; error: ApiError };
 
+export interface Stack {
+  name: string;
+  content: string;
+  createdBy: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface StackStatus extends Stack {
+  /** Distinct services seen among the stack's containers. */
+  services: string[];
+  running: number;
+  total: number;
+  state: 'running' | 'partial' | 'stopped' | 'inactive';
+}
+
 /** Trimmed container shape returned by the compat /containers/json endpoint. */
 export interface ContainerSummary {
   Id: string;

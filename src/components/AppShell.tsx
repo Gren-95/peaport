@@ -8,6 +8,8 @@ import {
   Container,
   HardDrive,
   Image as ImageIcon,
+  KeyRound,
+  Layers,
   LayoutDashboard,
   LogOut,
   Network,
@@ -36,11 +38,13 @@ export function can(role: Role, required: Role): boolean {
 
 const NAV: { href: string; label: string; icon: typeof Container; minRole?: Role }[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/stacks', label: 'Stacks', icon: Layers },
   { href: '/containers', label: 'Containers', icon: Container },
   { href: '/images', label: 'Images', icon: ImageIcon },
   { href: '/volumes', label: 'Volumes', icon: HardDrive },
   { href: '/networks', label: 'Networks', icon: Network },
   { href: '/pods', label: 'Pods', icon: Boxes },
+  { href: '/secrets', label: 'Secrets', icon: KeyRound, minRole: 'operator' },
   { href: '/users', label: 'Users', icon: Users, minRole: 'admin' },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];

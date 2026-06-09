@@ -8,6 +8,14 @@ control and session management.
 
 ## Features
 
+- **Stacks (Compose)** — create/upload Compose files in the UI and manage them
+  as stacks: deploy (`up`), pull, stop, restart, `down`, and delete, with live
+  streamed command output. Status is derived from the compose project labels on
+  the running containers. Driven by the bundled Compose CLI against the socket.
+- **Secrets** — AES-256-GCM encrypted, **write-only** store. Reference a secret
+  in any compose file as `${NAME}`; it is decrypted only on the server at deploy
+  time and injected into the engine process environment for interpolation, so
+  plaintext is never shown to other users or written into stored files.
 - **Containers** — list, inspect, start/stop/restart/kill/pause, remove, with
   live multiplexed **log streaming**, **resource stats** (CPU / memory / network
   / block IO), and an in-browser **exec terminal** (xterm.js over WebSocket).

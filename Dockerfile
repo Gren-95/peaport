@@ -8,9 +8,17 @@ WORKDIR /app
 
 # Build toolchain (for native modules) + bun as the package manager.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ unzip ca-certificates \
+  && apt-get install -y --no-install-recommends python3 make g++ unzip curl ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
   && npm install -g bun@1
+
+# Fetch the standalone Docker Compose v2 binary. It speaks the Docker API
+# directly (via DOCKER_HOST) and drives both Docker and Podman sockets.
+ARG COMPOSE_VERSION=v2.32.4
+RUN curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64" \
+      -o /usr/local/bin/docker-compose \
+  && chmod +x /usr/local/bin/docker-compose \
+  && /usr/local/bin/docker-compose version
 
 # Install dependencies first for better layer caching.
 COPY package.json bun.lock ./
@@ -29,10 +37,12 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
-    DATA_DIR=/app/data
+    DATA_DIR=/app/data \
+    COMPOSE_COMMAND=docker-compose
 
 # Copy only what the runtime needs. The better-sqlite3 binary fetched during
 # the bun install is built against the Node ABI and runs under Node.
+COPY --from=builder /usr/local/bin/docker-compose /usr/local/bin/docker-compose
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public

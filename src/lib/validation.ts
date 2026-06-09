@@ -66,3 +66,30 @@ export const createNetworkSchema = z.object({
 export const execSchema = z.object({
   cmd: z.array(z.string()).min(1).max(64),
 });
+
+// Compose project names must be lowercase and start with a letter or digit.
+const stackName = z
+  .string()
+  .trim()
+  .min(1, 'Stack name is required.')
+  .max(63)
+  .regex(/^[a-z0-9][a-z0-9_-]*$/, 'Use lowercase letters, digits, "-" and "_"; must start alphanumeric.');
+
+export const createStackSchema = z.object({
+  name: stackName,
+  content: z.string().min(1, 'Compose file content is required.').max(512_000),
+});
+
+export const updateStackSchema = z.object({
+  content: z.string().min(1, 'Compose file content is required.').max(512_000),
+});
+
+export const setSecretSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Secret name is required.')
+    .max(128)
+    .regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'Use an environment-variable style name (letters, digits, underscore).'),
+  value: z.string().min(1, 'Secret value is required.').max(64_000),
+});

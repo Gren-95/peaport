@@ -15,9 +15,12 @@ function int(value: string | undefined, fallback: number): number {
 }
 
 const isProd = process.env.NODE_ENV === 'production';
+// `next build` evaluates module-level code with NODE_ENV=production but without
+// runtime secrets present. Only enforce the secret requirement at runtime.
+const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
 
 const sessionSecret = process.env.SESSION_SECRET ?? '';
-if (isProd && (!sessionSecret || sessionSecret.length < 32)) {
+if (isProd && !isBuildPhase && (!sessionSecret || sessionSecret.length < 32)) {
   throw new Error(
     'SESSION_SECRET must be set to at least 32 characters in production. ' +
       'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"',

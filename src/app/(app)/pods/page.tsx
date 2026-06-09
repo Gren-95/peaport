@@ -78,7 +78,7 @@ export default function PodsPage() {
       ) : !data?.pods.length ? (
         <EmptyState message="No pods found." />
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-border bg-bg-soft">
               <tr>

@@ -95,7 +95,7 @@ export default function ContainersPage() {
       ) : !data?.containers.length ? (
         <EmptyState message="No containers found." />
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-border bg-bg-soft">
               <tr>

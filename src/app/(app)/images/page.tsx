@@ -73,7 +73,7 @@ export default function ImagesPage() {
       ) : !data?.images.length ? (
         <EmptyState message="No images found." />
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-border bg-bg-soft">
               <tr>

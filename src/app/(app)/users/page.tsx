@@ -60,7 +60,7 @@ export default function UsersPage() {
       ) : !data?.users.length ? (
         <EmptyState message="No users." />
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-border bg-bg-soft">
               <tr>

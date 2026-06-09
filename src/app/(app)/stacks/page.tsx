@@ -48,7 +48,7 @@ export default function StacksPage() {
       ) : !data?.stacks.length ? (
         <EmptyState message="No stacks yet. Create one from a Compose file." />
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-border bg-bg-soft">
               <tr>

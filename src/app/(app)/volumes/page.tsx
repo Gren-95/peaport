@@ -105,7 +105,7 @@ export default function VolumesPage() {
       ) : !volumes.length ? (
         <EmptyState message="No volumes found." />
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-border bg-bg-soft">
               <tr>

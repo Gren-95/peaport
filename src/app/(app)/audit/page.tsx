@@ -84,7 +84,7 @@ export default function AuditPage() {
         <EmptyState message="No audit entries yet." />
       ) : (
         <>
-          <div className="card overflow-hidden">
+          <div className="card overflow-x-auto">
             <table className="w-full">
               <thead className="border-b border-border bg-bg-soft">
                 <tr>

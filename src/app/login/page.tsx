@@ -24,6 +24,11 @@ function LoginForm() {
         body: { username, password },
       });
       setCsrfToken(data.csrfToken);
+      if (data.user.mustChangePassword) {
+        router.replace('/change-password');
+        router.refresh();
+        return;
+      }
       const next = params.get('next');
       router.replace(next && next.startsWith('/') ? next : '/dashboard');
       router.refresh();

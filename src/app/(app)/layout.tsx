@@ -10,6 +10,8 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
   const store = await cookies();
   const validated = validateSession(store.get(SESSION_COOKIE)?.value);
   if (!validated) redirect('/login');
+  // A pending forced password change blocks all app pages.
+  if (validated.user.mustChangePassword) redirect('/change-password');
 
   const engine = await detectEngine().catch(() => 'docker' as const);
 

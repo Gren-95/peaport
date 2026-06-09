@@ -51,7 +51,12 @@ export async function POST(req: NextRequest) {
     recordAudit({ username: row.username, role: row.role, method: 'POST', path: '/api/auth/login', status: 200, ip });
     const { id, csrfToken } = createSession(row.id, ip, req.headers.get('user-agent'));
     const res = ok({
-      user: { id: row.id, username: row.username, role: row.role },
+      user: {
+        id: row.id,
+        username: row.username,
+        role: row.role,
+        mustChangePassword: Boolean(row.must_change_password),
+      },
       csrfToken,
     });
     res.cookies.set(sessionCookie(id));

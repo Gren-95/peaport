@@ -17,12 +17,14 @@ export interface User {
   createdAt: number;
   updatedAt: number;
   lastLoginAt: number | null;
+  mustChangePassword: boolean;
 }
 
 export interface SessionUser {
   id: number;
   username: string;
   role: Role;
+  mustChangePassword: boolean;
 }
 
 export interface ApiError {

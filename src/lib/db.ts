@@ -15,6 +15,7 @@ export interface UserRow {
   created_at: number;
   updated_at: number;
   last_login_at: number | null;
+  must_change_password: number;
 }
 
 export interface SessionRow {
@@ -103,6 +104,16 @@ function migrate(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(ts DESC);
     CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(username);
   `);
+
+  // Idempotent column additions for databases created by earlier versions.
+  addColumnIfMissing(database, 'users', 'must_change_password', 'INTEGER NOT NULL DEFAULT 0');
+}
+
+function addColumnIfMissing(database: Database.Database, table: string, column: string, def: string): void {
+  const cols = database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) {
+    database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${def}`);
+  }
 }
 
 export interface AuditRow {

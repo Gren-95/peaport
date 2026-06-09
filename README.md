@@ -64,8 +64,9 @@ bun run dev                       # http://localhost:3000
 ```
 
 On first launch a bootstrap admin is created from `ADMIN_USERNAME` /
-`ADMIN_PASSWORD` (defaults `admin` / `changeme`). **Change the password
-immediately** under Settings.
+`ADMIN_PASSWORD` (defaults `admin` / `changeme`). The account is flagged to
+**require a password change on first login** — the panel blocks all other
+actions (server-side) until a new password is set.
 
 ### Enable the Podman API socket
 

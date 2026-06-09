@@ -58,6 +58,7 @@ function rowToUser(row: UserRow): User {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastLoginAt: row.last_login_at,
+    mustChangePassword: Boolean(row.must_change_password),
   };
 }
 
@@ -82,15 +83,20 @@ export function getUserRowByUsername(username: string): UserRow | undefined {
   return getDb().prepare('SELECT * FROM users WHERE username = ?').get(username) as UserRow | undefined;
 }
 
-export async function createUser(username: string, password: string, role: Role): Promise<User> {
+export async function createUser(
+  username: string,
+  password: string,
+  role: Role,
+  mustChangePassword = false,
+): Promise<User> {
   const ts = now();
   const hash = await hashPassword(password);
   const info = getDb()
     .prepare(
-      `INSERT INTO users (username, password_hash, role, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO users (username, password_hash, role, created_at, updated_at, must_change_password)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .run(username, hash, role, ts, ts);
+    .run(username, hash, role, ts, ts, mustChangePassword ? 1 : 0);
   return getUserById(Number(info.lastInsertRowid))!;
 }
 
@@ -103,7 +109,10 @@ export async function updateUser(
   const ts = now();
   if (changes.password !== undefined) {
     const hash = await hashPassword(changes.password);
-    getDb().prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?').run(hash, ts, id);
+    // Setting a password also clears any pending forced-change requirement.
+    getDb()
+      .prepare('UPDATE users SET password_hash = ?, updated_at = ?, must_change_password = 0 WHERE id = ?')
+      .run(hash, ts, id);
     // Force re-authentication everywhere after a credential change.
     destroyUserSessions(id);
   }
@@ -173,7 +182,12 @@ export function validateSession(sessionId: string | undefined): ValidatedSession
   getDb().prepare('UPDATE sessions SET last_seen_at = ? WHERE id = ?').run(ts, sessionId);
   if (Math.random() < 0.05) purgeExpiredSessions(ts); // opportunistic cleanup
   return {
-    user: { id: user.id, username: user.username, role: user.role },
+    user: {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword,
+    },
     session: { ...row, last_seen_at: ts },
   };
 }
@@ -205,9 +219,17 @@ export function safeEqual(a: string, b: string): boolean {
 export async function bootstrapAdmin(): Promise<void> {
   if (countUsers() > 0) return;
   const { username, password } = env.admin;
-  await createUser(username, password, 'admin');
+  if (env.isProd && password === 'changeme') {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[panel] WARNING: bootstrapping the admin with the default password in production. ' +
+        'Set ADMIN_PASSWORD to a strong value. The account is flagged to force a password change on first login.',
+    );
+  }
+  // Always require the bootstrap admin to set a new password before doing anything.
+  await createUser(username, password, 'admin', true);
   // eslint-disable-next-line no-console
-  console.log(`[panel] Bootstrapped admin user "${username}". Change the password after first login.`);
+  console.log(`[panel] Bootstrapped admin user "${username}". A password change is required on first login.`);
 }
 
 // Run the bootstrap at most once per process, lazily on the first auth request

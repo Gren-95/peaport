@@ -8,7 +8,14 @@ import { PodmanError } from '@/lib/podman';
 import { recordAudit } from '@/lib/audit';
 import { clientIp } from '@/lib/net';
 import { hasRole } from '@/lib/rbac';
+import { rateLimit } from '@/lib/ratelimit';
 import type { ApiError, Role, SessionUser } from '@/types';
+
+// Endpoints reachable while a forced password change is pending.
+const PASSWORD_CHANGE_ALLOWED = new Set(['/api/account/password', '/api/auth/logout', '/api/auth/me']);
+// Per-user budget for state-changing requests (sliding fixed window).
+const MUTATION_LIMIT = 120;
+const MUTATION_WINDOW_SECONDS = 60;
 
 export { hasRole };
 
@@ -67,6 +74,14 @@ export function withAuth(handler: Handler, options: GuardOptions = {}) {
         return fail({ code: 'AUTH_REQUIRED', message: 'Authentication required.' }, 401);
       }
 
+      // Force a pending password change before anything else is permitted.
+      if (validated.user.mustChangePassword && !PASSWORD_CHANGE_ALLOWED.has(req.nextUrl.pathname)) {
+        return fail(
+          { code: 'PASSWORD_CHANGE_REQUIRED', message: 'You must change your password before continuing.' },
+          403,
+        );
+      }
+
       if (mutating) {
         const token = req.headers.get(CSRF_HEADER);
         if (!token || !safeEqual(token, validated.session.csrf_token)) {
@@ -80,6 +95,16 @@ export function withAuth(handler: Handler, options: GuardOptions = {}) {
           { code: 'AUTH_FORBIDDEN', message: `This action requires the "${required}" role or higher.` },
           403,
         );
+      }
+
+      // Throttle state-changing requests per user.
+      if (mutating) {
+        const limit = rateLimit(`mut:${validated.user.id}`, MUTATION_LIMIT, MUTATION_WINDOW_SECONDS);
+        if (!limit.allowed) {
+          const res = fail({ code: 'RATE_LIMITED', message: 'Too many requests. Slow down.' }, 429);
+          res.headers.set('Retry-After', String(limit.retryAfter));
+          return res;
+        }
       }
 
       const params = (await routeCtx?.params) ?? {};

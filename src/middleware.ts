@@ -12,23 +12,20 @@ const httpsEnabled = process.env.COOKIE_SECURE === 'true';
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const hasSession = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
-  const isLogin = pathname === '/login';
+  const isAuthPage = pathname === '/login' || pathname === '/change-password';
   const isApi = pathname.startsWith('/api');
 
   const nonce = crypto.randomUUID();
   const csp = buildCsp(nonce);
 
-  // Redirects: no script injection, so just attach headers.
-  if (!hasSession && !isLogin && !isApi) {
+  // Send users with no session cookie to the login page. We intentionally do
+  // NOT redirect cookie-bearing users away from /login: the cookie's presence
+  // does not prove the session is valid (validation is server-side), and
+  // bouncing them would create a redirect loop with a stale/expired cookie.
+  if (!hasSession && !isAuthPage && !isApi) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('next', pathname);
-    return withSecurityHeaders(NextResponse.redirect(url), csp);
-  }
-  if (hasSession && isLogin) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/dashboard';
-    url.search = '';
     return withSecurityHeaders(NextResponse.redirect(url), csp);
   }
 

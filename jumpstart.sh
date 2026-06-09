@@ -24,7 +24,13 @@ PORT="${PORT:-3000}"
 COOKIE_SECURE="${COOKIE_SECURE:-false}"
 
 FORCE_BUILD=0
-[[ "${1:-}" == "--build" || "${1:-}" == "--rebuild" ]] && FORCE_BUILD=1
+HOST_NET="${HOST_NET:-0}"
+for arg in "$@"; do
+  case "$arg" in
+    --build|--rebuild) FORCE_BUILD=1 ;;
+    --host-net|--host) HOST_NET=1 ;;
+  esac
+done
 
 log() { printf '\033[36m▶ %s\033[0m\n' "$*"; }
 die() { printf '\033[31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
@@ -107,6 +113,16 @@ else
   RUN_ARGS+=(--userns=keep-id)
 fi
 
+# Networking: host mode exposes the machine's real adapters to the panel and
+# (via the D-Bus socket) lets nmcli report static/DHCP. Otherwise publish a port.
+if [[ "$HOST_NET" == "1" || "$HOST_NET" == "true" ]]; then
+  RUN_ARGS+=(--network host -e "PORT=$PORT")
+  [[ -S /run/dbus/system_bus_socket ]] && RUN_ARGS+=(-v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro)
+  log "Host networking ON — real host adapters visible; the panel binds directly on :$PORT (no port mapping)."
+else
+  RUN_ARGS+=(-p "$PORT:3000")
+fi
+
 # --- 6. (re)create the container -------------------------------------------
 if "$ENGINE" container inspect "$CONTAINER" >/dev/null 2>&1; then
   log "Replacing existing '$CONTAINER' container…"
@@ -116,7 +132,6 @@ fi
 log "Starting container…"
 "$ENGINE" run -d --name "$CONTAINER" \
   --restart unless-stopped \
-  -p "$PORT:3000" \
   "${RUN_ARGS[@]}" \
   -e SESSION_SECRET="$SESSION_SECRET" \
   -e SECRETS_KEY="$SECRETS_KEY" \

@@ -172,7 +172,82 @@ export default function DashboardPage() {
           <RecentEvents />
         </div>
       </div>
+
+      <div className="mt-4 card p-5">
+        <CardTitle icon={Network} title="Network adapters" />
+        <NetworkAdapters />
+      </div>
     </div>
+  );
+}
+
+interface Adapter {
+  name: string;
+  mac: string | null;
+  internal: boolean;
+  type: string | null;
+  connection: string | null;
+  assignment: 'dhcp' | 'static' | 'link-local' | 'disabled' | 'unknown';
+  addresses: { family: 'IPv4' | 'IPv6'; address: string; cidr: string | null }[];
+}
+
+function assignmentBadge(a: Adapter['assignment']): string {
+  if (a === 'static') return 'badge-ok';
+  if (a === 'dhcp') return 'badge bg-accent/15 text-accent';
+  return 'badge-muted';
+}
+
+function NetworkAdapters() {
+  const { data } = useSWR<{ adapters: Adapter[]; detection: string }>('/api/system/network', swrFetcher, {
+    refreshInterval: 30000,
+  });
+  if (!data) return <Spinner />;
+  const adapters = data.adapters.filter((a) => !a.internal || a.addresses.some((x) => x.family === 'IPv4'));
+
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="border-b border-border">
+            <tr>
+              <th className="th">Interface</th>
+              <th className="th">IPv4</th>
+              <th className="th">IPv6</th>
+              <th className="th">MAC</th>
+              <th className="th">Assignment</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {adapters.map((a) => {
+              const v4 = a.addresses.find((x) => x.family === 'IPv4');
+              const v6 = a.addresses.find((x) => x.family === 'IPv6' && !x.address.startsWith('fe80'));
+              return (
+                <tr key={a.name} className="hover:bg-bg-hover/50">
+                  <td className="td">
+                    <span className="font-medium text-gray-100">{a.name}</span>
+                    {a.type && <span className="ml-2 text-xs text-muted">{a.type}</span>}
+                  </td>
+                  <td className="td font-mono text-xs">{v4 ? (v4.cidr ?? v4.address) : '—'}</td>
+                  <td className="td font-mono text-xs text-muted" title={v6?.address}>
+                    {v6 ? v6.address : '—'}
+                  </td>
+                  <td className="td font-mono text-xs text-muted">{a.mac ?? '—'}</td>
+                  <td className="td">
+                    <span className={assignmentBadge(a.assignment)}>{a.assignment}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {data.detection === 'unavailable' && (
+        <p className="mt-3 text-xs text-muted">
+          Static/DHCP shown as &quot;unknown&quot; — NetworkManager/systemd-networkd is not reachable from the
+          container. Run with host networking (<code>./jumpstart.sh --host-net</code>) to read real adapters.
+        </p>
+      )}
+    </>
   );
 }
 

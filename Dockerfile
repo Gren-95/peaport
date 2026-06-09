@@ -33,6 +33,13 @@ RUN bunx next build
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 
+# nmcli (NetworkManager CLI) powers best-effort static/DHCP detection for the
+# network-adapters widget. It talks to the host's NetworkManager over the system
+# D-Bus socket when the container runs with host networking (see jumpstart --host-net).
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends network-manager iproute2 \
+  && rm -rf /var/lib/apt/lists/*
+
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \

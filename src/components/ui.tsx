@@ -148,6 +148,19 @@ export function stateBadge(state: string): string {
   }
 }
 
+export function stackStateBadge(state: 'running' | 'partial' | 'stopped' | 'inactive'): string {
+  switch (state) {
+    case 'running':
+      return 'badge-ok';
+    case 'partial':
+      return 'badge-warn';
+    case 'stopped':
+      return 'badge-danger';
+    default:
+      return 'badge-muted';
+  }
+}
+
 export function timeAgo(unixSeconds: number): string {
   if (!unixSeconds) return '—';
   const diff = Date.now() / 1000 - unixSeconds;

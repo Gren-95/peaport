@@ -8,8 +8,7 @@ import { ArrowLeft, Play, Square, RotateCw, Download, Trash2, Save, ChevronDown 
 import { api, ApiClientError, streamSsePost, swrFetcher } from '@/lib/client';
 import { useToast } from '@/components/Toast';
 import { useSession, can } from '@/components/AppShell';
-import { ErrorState, PageHeader, Spinner, stateBadge, timeAgo, useConfirm } from '@/components/ui';
-import { stackStateBadge } from '@/app/(app)/stacks/page';
+import { ErrorState, PageHeader, Spinner, stackStateBadge, stateBadge, timeAgo, useConfirm } from '@/components/ui';
 import type { ContainerSummary, Stack } from '@/types';
 
 interface StackDetail {

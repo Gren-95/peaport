@@ -8,21 +8,8 @@ import { Layers, Plus, Upload } from 'lucide-react';
 import { api, ApiClientError, swrFetcher } from '@/lib/client';
 import { useToast } from '@/components/Toast';
 import { useSession, can } from '@/components/AppShell';
-import { EmptyState, ErrorState, Modal, PageHeader, Spinner, timeAgo } from '@/components/ui';
+import { EmptyState, ErrorState, Modal, PageHeader, Spinner, stackStateBadge, timeAgo } from '@/components/ui';
 import type { StackStatus } from '@/types';
-
-export function stackStateBadge(state: StackStatus['state']): string {
-  switch (state) {
-    case 'running':
-      return 'badge-ok';
-    case 'partial':
-      return 'badge-warn';
-    case 'stopped':
-      return 'badge-danger';
-    default:
-      return 'badge-muted';
-  }
-}
 
 const SAMPLE = `services:
   web:

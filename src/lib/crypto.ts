@@ -17,7 +17,7 @@ function key(): Buffer {
   if (cachedKey) return cachedKey;
   const material = env.secretsKey || env.sessionSecret;
   // Fixed salt: the material itself is the secret; this only domain-separates.
-  cachedKey = crypto.scryptSync(material, 'podman-panel:secrets:v1', 32);
+  cachedKey = crypto.scryptSync(material, 'peaport:secrets:v1', 32);
   return cachedKey;
 }
 

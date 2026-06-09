@@ -1,0 +1,43 @@
+name: Bug report
+description: Report a problem with Peaport
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to …
+        2. Click …
+        3. See …
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Container engine
+      options:
+        - Docker
+        - Podman (rootless)
+        - Podman (rootful)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Peaport version / commit
+      placeholder: e.g. main @ 56972f0
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Container logs (`docker logs peaport`) or browser console. Redact secrets.
+      render: shell

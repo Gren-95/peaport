@@ -1,168 +1,132 @@
-# Peaport
+# 🫛 Peaport
 
-An advanced, multi-user web dashboard for managing **Podman** (and any
-Docker-API-compatible engine). Built for power users: full container lifecycle
-control, live log streaming, an interactive exec terminal, real-time stats, and
-management of images, volumes, networks, and pods — with role-based access
-control and session management.
+[![CI](https://github.com/Gren-95/peaport/actions/workflows/ci.yml/badge.svg)](https://github.com/Gren-95/peaport/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+![Podman & Docker](https://img.shields.io/badge/engine-Podman%20%7C%20Docker-7c5cff)
+
+**An advanced, self-hosted web control panel for Podman and Docker.**
+Manage containers, Compose stacks, images, volumes, networks and pods — with
+multi-user RBAC, encrypted secrets, an audit log, live metrics, and an
+in-browser terminal. One codebase drives either engine (the Podman API is
+Docker-compatible).
+
+> ⚠️ Peaport talks to the engine socket, which is **root-equivalent on the host**.
+> Run it on a trusted network, behind TLS (`COOKIE_SECURE=true`) for any real exposure.
+
+---
+
+## Quick start
+
+```bash
+git clone https://github.com/Gren-95/peaport.git && cd peaport
+./jumpstart.sh                 # auto-detects podman/docker, generates secrets, builds & runs
+```
+
+Open **http://localhost:3000** and sign in with the printed credentials
+(you'll be required to set a new password on first login).
+
+Useful flags / overrides:
+
+```bash
+./jumpstart.sh --host-net      # host networking → the Network-adapters widget sees real NICs
+./jumpstart.sh --build         # force an image rebuild
+ENGINE=docker ./jumpstart.sh   # force an engine    (also: PORT=8080, COOKIE_SECURE=true)
+```
+
+<details>
+<summary>Alternative: Docker/Podman Compose</summary>
+
+```bash
+export SESSION_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
+export ADMIN_PASSWORD='choose-a-strong-password'
+docker compose up -d --build        # or: podman-compose up -d --build
+```
+Edit the socket mount in `docker-compose.yml` for your engine.
+</details>
+
+<details>
+<summary>Alternative: local development</summary>
+
+Requires [bun](https://bun.sh) and a reachable engine socket.
+
+```bash
+bun install
+cp .env.example .env.local     # set PODMAN_SOCKET_PATH (e.g. /var/run/docker.sock)
+bun run dev                    # http://localhost:3000
+```
+
+Enable the rootless Podman socket if needed:
+`systemctl --user enable --now podman.socket`
+</details>
+
+---
 
 ## Features
 
-- **Stacks (Compose)** — create/upload Compose files in the UI and manage them
-  as stacks: deploy (`up`), pull, stop, restart, `down`, and delete, with live
-  streamed command output. Status is derived from the compose project labels on
-  the running containers. Driven by the bundled Compose CLI against the socket.
-- **Secrets** — AES-256-GCM encrypted, **write-only** store. Reference a secret
-  in any compose file as `${NAME}`; it is decrypted only on the server at deploy
-  time and injected into the engine process environment for interpolation, so
-  plaintext is never shown to other users or written into stored files.
-- **Containers** — list, inspect, start/stop/restart/kill/pause, remove, with
-  live multiplexed **log streaming**, **resource stats** (CPU / memory / network
-  / block IO), and an in-browser **exec terminal** (xterm.js over WebSocket).
-- **Images** — list, inspect, streaming **pull** with progress, prune, remove.
-- **Volumes / Networks** — list, create, inspect, prune, remove.
-- **Pods** — list, inspect, start/stop/restart, remove (Podman `libpod` API;
-  gracefully reported as unsupported when connected to Docker).
-- **Users & RBAC** — three roles:
-  - `viewer` — read-only (list, inspect, logs, stats)
-  - `operator` — viewer + lifecycle actions, exec, pull, prune
-  - `admin` — operator + destructive removals + user management
-- **Security** — bcrypt password hashing, server-side sessions with idle and
-  absolute timeouts, CSRF protection on all mutations, rate-limited login,
-  security headers (CSP, HSTS-ready, etc.), and audit-friendly generic errors.
+| Area | What you get |
+|------|--------------|
+| **Containers** | List/inspect, start·stop·restart·kill·pause, remove, **create/run** from a form, live **log streaming**, **stats**, and an in-browser **exec terminal** (xterm + WebSocket) |
+| **Stacks** | Create/upload Compose files and manage them as stacks (up·pull·stop·restart·down·delete) with **streamed output**; status from compose project labels |
+| **Secrets** | AES-256-GCM, **write-only** store; referenced in Compose as `${NAME}` and injected at deploy time — plaintext never shown or persisted in files |
+| **Images / Volumes / Networks** | List, inspect, create, and **comprehensive prune** (scope + label/age filters, space reclaimed) |
+| **Pods** | List, inspect, start·stop·restart, remove (Podman `libpod`; gracefully marked unsupported on Docker) |
+| **Dashboard** | Live CPU/mem + sparklines, container-state split, disk usage, **attention panel**, **published ports**, **network adapters** (static/DHCP), engine warnings, recent events |
+| **Users & RBAC** | `viewer` → `operator` → `admin`, enforced server-side; forced password change on first login |
+| **Observability** | Real-time engine **events** feed + an append-only **audit log** (stdout-mirrored, exportable) |
+
+### Security highlights
+
+bcrypt password hashing · server-side sessions (idle + absolute timeouts, rotation,
+revocation) · CSRF on all mutations · per-user rate limiting · nonce-based CSP,
+HSTS, and other hardening headers · encrypted secrets · audit trail.
+Validated against the OWASP Top 10.
+
+---
+
+## Configuration
+
+All via environment variables (see [`.env.example`](.env.example)). Key ones:
+
+| Variable | Purpose |
+|----------|---------|
+| `PODMAN_SOCKET_PATH` | Engine API socket (Podman rootless/rootful or Docker) |
+| `SESSION_SECRET` | Signs/derives sessions — **required** in production (≥32 chars) |
+| `SECRETS_KEY` | Encrypts stored secrets (falls back to `SESSION_SECRET` if unset) |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Bootstrap admin, created on first run |
+| `PORT` · `DATA_DIR` | Listen port · SQLite location (mount as a volume) |
+| `COOKIE_SECURE` | `true` behind HTTPS (enables Secure cookie + HSTS) |
+| `COMPOSE_COMMAND` | Compose CLI override (default auto / `docker compose`) |
+
+---
 
 ## Tech stack
 
 Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS · better-sqlite3 ·
-a custom Node server for WebSocket exec. Package manager: **bun**.
-
-## Architecture
+a custom Node server for WebSocket exec · bundled Compose CLI. Package manager: **bun**.
 
 ```
-Browser ──HTTP/SSE──> Next.js route handlers ──unix socket──> Podman / Docker API
-        ──WebSocket──> server.js (exec)      ──unix socket──> /exec attach (hijacked)
-                         │
-                         └── SQLite (users, sessions)
+Browser ──HTTP/SSE──▶ Next.js route handlers ──unix socket──▶ Podman / Docker API
+        ──WebSocket──▶ server.js (exec)       ──unix socket──▶ /exec attach (hijacked)
+                          └── SQLite (users · sessions · stacks · secrets · audit)
 ```
 
-The Podman REST API is Docker-API-compatible, so the same code runs against
-either engine. Pod features use Podman's `libpod` endpoints.
-
-## Quick start (local development)
-
-Requires Node.js ≥ 20 and [bun](https://bun.sh).
+## Testing
 
 ```bash
-bun install
-cp .env.example .env.local        # then edit values
-
-# Point at your engine socket in .env.local, e.g. for local testing on Docker:
-#   PODMAN_SOCKET_PATH=/var/run/docker.sock
-# Rootless Podman:  PODMAN_SOCKET_PATH=/run/user/$(id -u)/podman/podman.sock
-
-bun run dev                       # http://localhost:3000
-```
-
-On first launch a bootstrap admin is created from `ADMIN_USERNAME` /
-`ADMIN_PASSWORD` (defaults `admin` / `changeme`). The account is flagged to
-**require a password change on first login** — the panel blocks all other
-actions (server-side) until a new password is set.
-
-### Enable the Podman API socket
-
-Rootless (recommended):
-
-```bash
-systemctl --user enable --now podman.socket
-# socket at: /run/user/$(id -u)/podman/podman.sock
-```
-
-Rootful:
-
-```bash
-sudo systemctl enable --now podman.socket
-# socket at: /run/podman/podman.sock
-```
-
-## Running with Docker / Podman (dockerized)
-
-```bash
-# 1. Provide a strong session secret (required).
-export SESSION_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
-export ADMIN_PASSWORD='choose-a-strong-password'
-
-# 2. Build and start.
-docker compose up -d --build        # or: podman-compose up -d --build
-```
-
-Open http://localhost:3000.
-
-### Mounting the right socket
-
-Edit the `volumes` entry in `docker-compose.yml` to map your engine's socket to
-`/var/run/docker.sock` inside the container:
-
-| Engine            | Host socket                                  |
-|-------------------|----------------------------------------------|
-| Docker            | `/var/run/docker.sock`                        |
-| Rootful Podman    | `/run/podman/podman.sock`                     |
-| Rootless Podman   | `${XDG_RUNTIME_DIR}/podman/podman.sock`       |
-
-For **rootless Podman**, run the dashboard container with the user namespace
-kept so the mounted socket is accessible:
-
-```bash
-podman run -d --name peaport \
-  --userns=keep-id \
-  -p 3000:3000 \
-  -e SESSION_SECRET="$SESSION_SECRET" \
-  -e PODMAN_SOCKET_PATH=/run/podman/podman.sock \
-  -v ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman/podman.sock \
-  -v peaport-data:/app/data \
-  peaport:latest
-```
-
-> **Security note:** access to the engine socket is equivalent to root on the
-> host. Run the dashboard on a trusted network and put it behind a TLS reverse
-> proxy (set `COOKIE_SECURE=true`) before exposing it.
-
-## Configuration
-
-All configuration is via environment variables — see `.env.example` for the
-full list (socket path, session secret, data dir, port, bootstrap admin,
-session timeouts, cookie security).
-
-## Scripts
-
-```bash
-bun run dev         # development server (custom server with WebSocket exec)
-bun run build       # production build
-bun run start       # run the production build
 bun run typecheck   # tsc --noEmit
-bun run lint        # next lint
-bun run test        # unit tests (bun test) — rbac, crypto, auth, audit, container spec
-bun run test:e2e    # Playwright E2E (golden path) — needs the engine socket + `playwright install chromium`
+bun run test        # unit tests (rbac, crypto, auth, audit, container spec, rate limit)
+bun run build       # production build
+bun run test:e2e    # Playwright golden path (forced change → pull → run → logs → remove)
 ```
 
-The E2E test boots a production build on a throwaway port/database pointed at the
-engine socket, then drives a browser through: forced first-login password change →
-pull `hello-world` → run it → assert its logs → remove it.
+CI runs all of the above on every push and PR.
 
-## Project layout
+## Contributing
 
-```
-server.js                 # custom Next server + /ws/exec WebSocket
-src/
-  lib/                    # podman client, db, auth, api guards, validation, sse
-  app/api/                # REST route handlers
-  app/(app)/              # authenticated pages
-  app/login/              # login screen
-  components/             # UI, LogViewer, StatsPanel, ExecTerminal, shell
-  middleware.ts           # security headers + auth gate
-data/                     # SQLite database (gitignored, mount as a volume)
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md). Report security issues privately per
+[SECURITY.md](SECURITY.md).
 
 ## License
 
-Peaport is free software licensed under the **GNU General Public License v3.0
-or later** (GPL-3.0-or-later). See [LICENSE](LICENSE) for the full text.
+Free software under the **GNU General Public License v3.0 or later**
+(GPL-3.0-or-later) — see [LICENSE](LICENSE).

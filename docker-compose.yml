@@ -1,0 +1,37 @@
+# Works with both `docker compose` and `podman-compose`.
+#
+# The dashboard talks to the container engine over its API socket, which must
+# be mounted read-write into the container. See README for rootless Podman and
+# permission notes.
+
+services:
+  panel:
+    build: .
+    image: podman-panel:latest
+    container_name: podman-panel
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Inside the container the socket is always mounted at this path.
+      PODMAN_SOCKET_PATH: /var/run/docker.sock
+      # REQUIRED: generate with
+      #   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in your environment or .env}
+      # Bootstrap admin (created only on first run). Change after first login.
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      # Set to "true" when serving over HTTPS (behind a TLS reverse proxy).
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      # Engine socket. For rootless Podman use:
+      #   ${XDG_RUNTIME_DIR}/podman/podman.sock:/var/run/docker.sock
+      # For rootful Podman use:
+      #   /run/podman/podman.sock:/var/run/docker.sock
+      # For Docker:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persisted SQLite database (users + sessions).
+      - panel-data:/app/data
+
+volumes:
+  panel-data:

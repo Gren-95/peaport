@@ -10,7 +10,6 @@
  * duplicated session logic here.
  */
 const http = require('node:http');
-const { parse } = require('node:url');
 const next = require('next');
 const { WebSocketServer } = require('ws');
 
@@ -167,14 +166,14 @@ async function startExec(ws, containerId, shell) {
 
 app.prepare().then(() => {
   const server = http.createServer((req, res) => {
-    handle(req, res, parse(req.url, true));
+    handle(req, res);
   });
 
   const wss = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', async (req, socket, head) => {
-    const { pathname, query } = parse(req.url, true);
-    if (pathname !== '/ws/exec') {
+    const url = new URL(req.url, 'http://localhost');
+    if (url.pathname !== '/ws/exec') {
       socket.destroy();
       return;
     }
@@ -186,7 +185,7 @@ app.prepare().then(() => {
       socket.destroy();
       return;
     }
-    const containerId = query.id;
+    const containerId = url.searchParams.get('id');
     if (!containerId) {
       socket.write('HTTP/1.1 400 Bad Request\r\n\r\n');
       socket.destroy();
@@ -194,7 +193,7 @@ app.prepare().then(() => {
     }
 
     wss.handleUpgrade(req, socket, head, (ws) => {
-      startExec(ws, String(containerId), query.shell ? String(query.shell) : undefined);
+      startExec(ws, containerId, url.searchParams.get('shell') || undefined);
     });
   });
 

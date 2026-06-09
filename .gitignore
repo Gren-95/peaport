@@ -35,4 +35,4 @@ coverage/
 next-env.d.ts
 
 # jumpstart-generated secrets
-/.panel.env
+/.peaport.env

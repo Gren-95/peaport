@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Podman Panel',
+  title: 'Peaport',
   description: 'Advanced web dashboard for Podman and Docker-compatible engines',
   robots: { index: false, follow: false },
 };

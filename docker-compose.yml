@@ -7,8 +7,8 @@
 services:
   panel:
     build: .
-    image: podman-panel:latest
-    container_name: podman-panel
+    image: peaport:latest
+    container_name: peaport
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -31,7 +31,7 @@ services:
       # For Docker:
       - /var/run/docker.sock:/var/run/docker.sock
       # Persisted SQLite database (users + sessions).
-      - panel-data:/app/data
+      - peaport-data:/app/data
 
 volumes:
-  panel-data:
+  peaport-data:

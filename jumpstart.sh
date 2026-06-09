@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# jumpstart.sh — build and run Podman Panel with one command.
+# jumpstart.sh — build and run Peaport with one command.
 #
 # Auto-detects podman or docker, locates the engine socket, generates and
 # persists strong secrets, builds the image if needed, and starts the container.
@@ -17,9 +17,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-IMAGE="podman-panel:latest"
-CONTAINER="podman-panel"
-ENV_FILE=".panel.env"
+IMAGE="peaport:latest"
+CONTAINER="peaport"
+ENV_FILE=".peaport.env"
 PORT="${PORT:-3000}"
 COOKIE_SECURE="${COOKIE_SECURE:-false}"
 
@@ -140,7 +140,7 @@ log "Starting container…"
   -e COOKIE_SECURE="$COOKIE_SECURE" \
   -e PODMAN_SOCKET_PATH=/var/run/docker.sock \
   -v "$SOCKET:/var/run/docker.sock" \
-  -v panel-data:/app/data \
+  -v peaport-data:/app/data \
   "$IMAGE" >/dev/null
 
 # --- 7. wait until it serves -----------------------------------------------
@@ -161,7 +161,7 @@ fi
 # --- 8. summary -------------------------------------------------------------
 cat <<EOF
 
-✅ Podman Panel is running.
+✅ Peaport is running.
 
    URL       http://localhost:$PORT
    Username  $ADMIN_USERNAME

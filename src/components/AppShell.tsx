@@ -123,7 +123,7 @@ export default function AppShell({
             <div className="flex items-center justify-between gap-2 px-3 py-4">
               <div className={`flex items-center gap-2 text-accent ${collapsed ? 'lg:w-full lg:justify-center' : ''}`}>
                 <Boxes size={22} className="shrink-0" />
-                <span className={`font-semibold text-gray-100 ${labelHidden}`}>Podman Panel</span>
+                <span className={`font-semibold text-gray-100 ${labelHidden}`}>Peaport</span>
               </div>
               {/* Desktop collapse toggle */}
               <button
@@ -198,7 +198,7 @@ export default function AppShell({
               </button>
               <div className="flex items-center gap-2 text-accent">
                 <Boxes size={20} />
-                <span className="font-semibold text-gray-100">Podman Panel</span>
+                <span className="font-semibold text-gray-100">Peaport</span>
               </div>
             </header>
 

@@ -43,7 +43,7 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center justify-center gap-2 text-accent">
           <Boxes size={28} />
-          <span className="text-xl font-semibold text-gray-100">Podman Panel</span>
+          <span className="text-xl font-semibold text-gray-100">Peaport</span>
         </div>
         <form onSubmit={onSubmit} className="card space-y-4 p-6">
           <div>

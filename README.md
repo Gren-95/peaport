@@ -1,4 +1,4 @@
-# Podman Panel
+# Peaport
 
 An advanced, multi-user web dashboard for managing **Podman** (and any
 Docker-API-compatible engine). Built for power users: full container lifecycle
@@ -112,14 +112,14 @@ For **rootless Podman**, run the dashboard container with the user namespace
 kept so the mounted socket is accessible:
 
 ```bash
-podman run -d --name podman-panel \
+podman run -d --name peaport \
   --userns=keep-id \
   -p 3000:3000 \
   -e SESSION_SECRET="$SESSION_SECRET" \
   -e PODMAN_SOCKET_PATH=/run/podman/podman.sock \
   -v ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman/podman.sock \
-  -v panel-data:/app/data \
-  podman-panel:latest
+  -v peaport-data:/app/data \
+  peaport:latest
 ```
 
 > **Security note:** access to the engine socket is equivalent to root on the

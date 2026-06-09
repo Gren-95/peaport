@@ -1,30 +1,38 @@
 # syntax=docker/dockerfile:1
 
-# ---- builder: install deps (bun) and produce the Next.js build ----
-# Use the same Debian base (bookworm) as the runner so the native
-# better-sqlite3 binary links against a matching glibc.
+# ---- prod-deps: production-only node_modules (keeps the runtime image small) ----
+FROM node:26-bookworm-slim AS prod-deps
+WORKDIR /app
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && npm install -g bun@1
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production
+
+# ---- builder: full deps + Next.js production build ----
 FROM node:26-bookworm-slim AS builder
 WORKDIR /app
-
-# Build toolchain (for native modules) + bun as the package manager.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ unzip curl ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
   && npm install -g bun@1
 
-# Fetch the standalone Docker Compose v2 binary. It speaks the Docker API
-# directly (via DOCKER_HOST) and drives both Docker and Podman sockets.
+# Standalone Docker Compose v2 binary (arch-aware). It speaks the Docker API
+# directly via DOCKER_HOST and drives both Docker and Podman sockets.
+ARG TARGETARCH
 ARG COMPOSE_VERSION=v2.32.4
-RUN curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64" \
-      -o /usr/local/bin/docker-compose \
-  && chmod +x /usr/local/bin/docker-compose \
-  && /usr/local/bin/docker-compose version
+RUN case "${TARGETARCH:-amd64}" in \
+      amd64) CARCH=x86_64 ;; \
+      arm64) CARCH=aarch64 ;; \
+      *) CARCH=x86_64 ;; \
+    esac \
+  && curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${CARCH}" \
+       -o /usr/local/bin/docker-compose \
+  && chmod +x /usr/local/bin/docker-compose
 
-# Install dependencies first for better layer caching.
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
-
-# Build the application.
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN bunx next build
@@ -34,8 +42,8 @@ FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 
 # nmcli (NetworkManager CLI) powers best-effort static/DHCP detection for the
-# network-adapters widget. It talks to the host's NetworkManager over the system
-# D-Bus socket when the container runs with host networking (see jumpstart --host-net).
+# network-adapters widget, via the host's NetworkManager over the D-Bus socket
+# when run with host networking (jumpstart --host-net).
 RUN apt-get update \
   && apt-get install -y --no-install-recommends network-manager iproute2 \
   && rm -rf /var/lib/apt/lists/*
@@ -47,18 +55,18 @@ ENV NODE_ENV=production \
     DATA_DIR=/app/data \
     COMPOSE_COMMAND=docker-compose
 
-# Copy only what the runtime needs. The better-sqlite3 binary fetched during
-# the bun install is built against the Node ABI and runs under Node.
 COPY --from=builder /usr/local/bin/docker-compose /usr/local/bin/docker-compose
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/server.js ./server.js
 
-# Persisted SQLite database lives here; declare it as a volume.
-RUN mkdir -p /app/data && chown -R node:node /app
+# Only the data dir needs to be writable by the runtime user; the rest of /app
+# is read-only at runtime and stays root-owned (world-readable) — avoids
+# duplicating node_modules into a chown layer.
+RUN mkdir -p /app/data && chown node:node /app/data
 VOLUME ["/app/data"]
 
 USER node

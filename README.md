@@ -15,6 +15,18 @@ Docker-compatible).
 
 ---
 
+## Screenshots
+
+![Dashboard](docs/img/dashboard.png)
+
+| Containers | Stacks | Events |
+|:---:|:---:|:---:|
+| ![Containers](docs/img/containers.png) | ![Stacks](docs/img/stacks.png) | ![Events](docs/img/events.png) |
+
+<sub>Images browser and a mobile layout are in [`docs/img`](docs/img).</sub>
+
+---
+
 ## Quick start
 
 ```bash
@@ -24,6 +36,20 @@ git clone https://github.com/Gren-95/peaport.git && cd peaport
 
 Open **http://localhost:3000** and sign in with the printed credentials
 (you'll be required to set a new password on first login).
+
+<details>
+<summary>Or run the prebuilt image from GHCR (no clone/build)</summary>
+
+```bash
+docker run -d --name peaport -p 3000:3000 \
+  --group-add "$(getent group docker | cut -d: -f3)" \
+  -e SESSION_SECRET="$(openssl rand -hex 48)" \
+  -e PODMAN_SOCKET_PATH=/var/run/docker.sock \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v peaport-data:/app/data \
+  ghcr.io/gren-95/peaport:latest
+```
+</details>
 
 Useful flags / overrides:
 

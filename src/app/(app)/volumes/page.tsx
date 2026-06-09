@@ -6,7 +6,7 @@ import { Plus, Trash2, Eraser } from 'lucide-react';
 import { api, ApiClientError, swrFetcher } from '@/lib/client';
 import { useToast } from '@/components/Toast';
 import { useSession, can } from '@/components/AppShell';
-import { EmptyState, ErrorState, Modal, PageHeader, Spinner, useConfirm } from '@/components/ui';
+import { EmptyState, ErrorState, Modal, PageHeader, Spinner, bytes, useConfirm } from '@/components/ui';
 
 interface Volume {
   Name: string;
@@ -24,6 +24,7 @@ export default function VolumesPage() {
     refreshInterval: 15000,
   });
   const [createOpen, setCreateOpen] = useState(false);
+  const [pruneOpen, setPruneOpen] = useState(false);
   const [name, setName] = useState('');
   const [driver, setDriver] = useState('local');
 
@@ -51,18 +52,6 @@ export default function VolumesPage() {
     }
   }
 
-  async function prune() {
-    const ok = await confirm({ title: 'Prune volumes', message: 'Remove all unused volumes?', confirmLabel: 'Prune' });
-    if (!ok) return;
-    try {
-      await api('/api/volumes/prune', { method: 'POST' });
-      toast.success('Unused volumes pruned');
-      mutate();
-    } catch (err) {
-      toast.error(err instanceof ApiClientError ? err.message : 'Failed to prune');
-    }
-  }
-
   const isOperator = can(user.role, 'operator');
   const isAdmin = can(user.role, 'admin');
   const volumes = data?.Volumes ?? [];
@@ -74,7 +63,7 @@ export default function VolumesPage() {
         actions={
           <>
             {isOperator && (
-              <button className="btn-ghost" onClick={prune}>
+              <button className="btn-ghost" onClick={() => setPruneOpen(true)}>
                 <Eraser size={15} /> Prune
               </button>
             )}
@@ -87,6 +76,7 @@ export default function VolumesPage() {
         }
       />
       {dialog}
+      <PruneVolumesDialog open={pruneOpen} onClose={() => setPruneOpen(false)} onDone={() => mutate()} />
       <Modal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -145,5 +135,95 @@ export default function VolumesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+type VolumePruneScope = 'anonymous' | 'all';
+
+function PruneVolumesDialog({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const [scope, setScope] = useState<VolumePruneScope>('anonymous');
+  const [label, setLabel] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    setBusy(true);
+    try {
+      const params = new URLSearchParams();
+      if (scope === 'all') params.set('all', 'true');
+      if (label.trim()) params.set('label', label.trim());
+      const res = await api<{ deleted: number; spaceReclaimed: number }>(
+        `/api/volumes/prune?${params.toString()}`,
+        { method: 'POST' },
+      );
+      toast.success(
+        res.deleted > 0
+          ? `Removed ${res.deleted} volume${res.deleted === 1 ? '' : 's'}, reclaimed ${bytes(res.spaceReclaimed)}`
+          : 'Nothing to prune',
+      );
+      onClose();
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof ApiClientError ? err.message : 'Failed to prune');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={busy ? () => {} : onClose}
+      title="Prune volumes"
+      footer={
+        <>
+          <button className="btn-ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button className={scope === 'all' ? 'btn-danger' : 'btn-primary'} onClick={run} disabled={busy}>
+            {busy ? <Spinner size={14} /> : <Eraser size={15} />} Prune
+          </button>
+        </>
+      }
+    >
+      <fieldset className="space-y-2">
+        <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-3 hover:bg-bg-hover">
+          <input
+            type="radio"
+            name="vol-prune-scope"
+            className="mt-1"
+            checked={scope === 'anonymous'}
+            onChange={() => setScope('anonymous')}
+          />
+          <span>
+            <span className="block text-sm font-medium text-gray-100">Anonymous unused volumes</span>
+            <span className="block text-xs text-muted">Auto-generated volumes with no name, not attached to a container.</span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-3 hover:bg-bg-hover">
+          <input
+            type="radio"
+            name="vol-prune-scope"
+            className="mt-1"
+            checked={scope === 'all'}
+            onChange={() => setScope('all')}
+          />
+          <span>
+            <span className="block text-sm font-medium text-gray-100">All unused volumes (incl. named)</span>
+            <span className="block text-xs text-muted">
+              Every volume not attached to a container. <strong className="text-warn">Deletes their data permanently.</strong>
+            </span>
+          </span>
+        </label>
+      </fieldset>
+      <label className="label mt-4">Only volumes with label (optional)</label>
+      <input
+        className="input"
+        placeholder="e.g. env=staging"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        disabled={busy}
+      />
+    </Modal>
   );
 }

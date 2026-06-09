@@ -78,7 +78,21 @@ export const volumes = {
     podmanRequest('/volumes/create', { method: 'POST', body }),
   remove: (name: string, force: boolean) =>
     podmanRequest(`/volumes/${encodeURIComponent(name)}`, { method: 'DELETE', query: { force } }),
-  prune: () => podmanRequest('/volumes/prune', { method: 'POST' }),
+  /**
+   * Prune unused volumes. By default the engine removes only anonymous unused
+   * volumes; with `all` it also removes unused *named* volumes. An optional
+   * `label` filter (e.g. "env=staging") restricts pruning to matching volumes.
+   */
+  prune: (options: { all?: boolean; label?: string } = {}) => {
+    const filters: Record<string, string[]> = {};
+    if (options.all) filters.all = ['true'];
+    if (options.label) filters.label = [options.label];
+    const query = Object.keys(filters).length ? { filters: JSON.stringify(filters) } : undefined;
+    return podmanRequest<{ VolumesDeleted?: string[] | null; SpaceReclaimed?: number }>('/volumes/prune', {
+      method: 'POST',
+      query,
+    });
+  },
 };
 
 // --- networks ---------------------------------------------------------------
@@ -89,7 +103,18 @@ export const networks = {
   create: (body: { Name: string; Driver?: string; Internal?: boolean }) =>
     podmanRequest('/networks/create', { method: 'POST', body }),
   remove: (id: string) => podmanRequest(`/networks/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-  prune: () => podmanRequest('/networks/prune', { method: 'POST' }),
+  /**
+   * Prune unused networks (those not attached to any container). Networks have
+   * no "dangling" concept, so this always targets all unused networks. Optional
+   * `until` age and `label` filters narrow the selection.
+   */
+  prune: (options: { until?: string; label?: string } = {}) => {
+    const filters: Record<string, string[]> = {};
+    if (options.until) filters.until = [options.until];
+    if (options.label) filters.label = [options.label];
+    const query = Object.keys(filters).length ? { filters: JSON.stringify(filters) } : undefined;
+    return podmanRequest<{ NetworksDeleted?: string[] | null }>('/networks/prune', { method: 'POST', query });
+  },
 };
 
 // --- pods (libpod / Podman only) -------------------------------------------

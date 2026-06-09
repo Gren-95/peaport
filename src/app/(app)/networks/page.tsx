@@ -25,6 +25,7 @@ export default function NetworksPage() {
     refreshInterval: 15000,
   });
   const [createOpen, setCreateOpen] = useState(false);
+  const [pruneOpen, setPruneOpen] = useState(false);
   const [name, setName] = useState('');
   const [driver, setDriver] = useState('bridge');
   const [internal, setInternal] = useState(false);
@@ -56,18 +57,6 @@ export default function NetworksPage() {
     }
   }
 
-  async function prune() {
-    const ok = await confirm({ title: 'Prune networks', message: 'Remove all unused networks?', confirmLabel: 'Prune' });
-    if (!ok) return;
-    try {
-      await api('/api/networks/prune', { method: 'POST' });
-      toast.success('Unused networks pruned');
-      mutate();
-    } catch (err) {
-      toast.error(err instanceof ApiClientError ? err.message : 'Failed to prune');
-    }
-  }
-
   const isOperator = can(user.role, 'operator');
   const isAdmin = can(user.role, 'admin');
 
@@ -78,7 +67,7 @@ export default function NetworksPage() {
         actions={
           <>
             {isOperator && (
-              <button className="btn-ghost" onClick={prune}>
+              <button className="btn-ghost" onClick={() => setPruneOpen(true)}>
                 <Eraser size={15} /> Prune
               </button>
             )}
@@ -91,6 +80,7 @@ export default function NetworksPage() {
         }
       />
       {dialog}
+      <PruneNetworksDialog open={pruneOpen} onClose={() => setPruneOpen(false)} onDone={() => mutate()} />
       <Modal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -160,5 +150,71 @@ export default function NetworksPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function PruneNetworksDialog({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const [until, setUntil] = useState('');
+  const [label, setLabel] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    setBusy(true);
+    try {
+      const params = new URLSearchParams();
+      if (until.trim()) params.set('until', until.trim());
+      if (label.trim()) params.set('label', label.trim());
+      const qs = params.toString();
+      const res = await api<{ deleted: number }>(`/api/networks/prune${qs ? `?${qs}` : ''}`, { method: 'POST' });
+      toast.success(
+        res.deleted > 0 ? `Removed ${res.deleted} network${res.deleted === 1 ? '' : 's'}` : 'Nothing to prune',
+      );
+      onClose();
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof ApiClientError ? err.message : 'Failed to prune');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={busy ? () => {} : onClose}
+      title="Prune networks"
+      footer={
+        <>
+          <button className="btn-ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button className="btn-primary" onClick={run} disabled={busy}>
+            {busy ? <Spinner size={14} /> : <Eraser size={15} />} Prune
+          </button>
+        </>
+      }
+    >
+      <p className="text-sm text-gray-300">
+        Removes all networks not attached to any container (built-in networks like <code>bridge</code>,{' '}
+        <code>host</code> and <code>none</code> are never removed).
+      </p>
+      <label className="label mt-4">Only networks older than (optional)</label>
+      <input
+        className="input"
+        placeholder="e.g. 24h, 168h, or 2025-01-01T00:00:00"
+        value={until}
+        onChange={(e) => setUntil(e.target.value)}
+        disabled={busy}
+      />
+      <label className="label mt-3">Only networks with label (optional)</label>
+      <input
+        className="input"
+        placeholder="e.g. env=staging"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        disabled={busy}
+      />
+    </Modal>
   );
 }

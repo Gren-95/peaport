@@ -1,16 +1,16 @@
-# 🫛 Peaport
+# Peaport
 
 [![CI](https://github.com/Gren-95/peaport/actions/workflows/ci.yml/badge.svg)](https://github.com/Gren-95/peaport/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 ![Podman & Docker](https://img.shields.io/badge/engine-Podman%20%7C%20Docker-7c5cff)
 
-**An advanced, self-hosted web control panel for Podman and Docker.**
-Manage containers, Compose stacks, images, volumes, networks and pods — with
+**A self-hosted web control panel for Podman and Docker.**
+Manage containers, Compose stacks, images, volumes, networks and pods, with
 multi-user RBAC, encrypted secrets, an audit log, live metrics, and an
 in-browser terminal. One codebase drives either engine (the Podman API is
 Docker-compatible).
 
-> ⚠️ Peaport talks to the engine socket, which is **root-equivalent on the host**.
+> **Warning:** Peaport talks to the engine socket, which is **root-equivalent on the host**.
 > Run it on a trusted network, behind TLS (`COOKIE_SECURE=true`) for any real exposure.
 
 ---
@@ -50,7 +50,7 @@ docker run -d --name peaport -p 3000:3000 \
   ghcr.io/gren-95/peaport:latest
 ```
 
-Or with Compose — [`examples/compose.yaml`](examples/compose.yaml):
+Or with Compose, using [`examples/compose.yaml`](examples/compose.yaml):
 
 ```bash
 export SESSION_SECRET=$(openssl rand -hex 48)
@@ -101,7 +101,7 @@ Enable the rootless Podman socket if needed:
 |------|--------------|
 | **Containers** | List/inspect, start·stop·restart·kill·pause, remove, **create/run** from a form, live **log streaming**, **stats**, and an in-browser **exec terminal** (xterm + WebSocket) |
 | **Stacks** | Create/upload Compose files and manage them as stacks (up·pull·stop·restart·down·delete) with **streamed output**; status from compose project labels |
-| **Secrets** | AES-256-GCM, **write-only** store; referenced in Compose as `${NAME}` and injected at deploy time — plaintext never shown or persisted in files |
+| **Secrets** | AES-256-GCM, **write-only** store; referenced in Compose as `${NAME}` and injected at deploy time; plaintext is never shown or persisted in files |
 | **Images / Volumes / Networks** | List, inspect, create, and **comprehensive prune** (scope + label/age filters, space reclaimed) |
 | **Pods** | List, inspect, start·stop·restart, remove (Podman `libpod`; gracefully marked unsupported on Docker) |
 | **Dashboard** | Live CPU/mem + sparklines, container-state split, disk usage, **attention panel**, **published ports**, **network adapters** (static/DHCP), engine warnings, recent events |
@@ -124,7 +124,7 @@ All via environment variables (see [`.env.example`](.env.example)). Key ones:
 | Variable | Purpose |
 |----------|---------|
 | `PODMAN_SOCKET_PATH` | Engine API socket (Podman rootless/rootful or Docker) |
-| `SESSION_SECRET` | Signs/derives sessions — **required** in production (≥32 chars) |
+| `SESSION_SECRET` | Signs/derives sessions; **required** in production (≥32 chars) |
 | `SECRETS_KEY` | Encrypts stored secrets (falls back to `SESSION_SECRET` if unset) |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Bootstrap admin, created on first run |
 | `PORT` · `DATA_DIR` | Listen port · SQLite location (mount as a volume) |
@@ -163,4 +163,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Report security issues privately per
 ## License
 
 Free software under the **GNU General Public License v3.0 or later**
-(GPL-3.0-or-later) — see [LICENSE](LICENSE).
+(GPL-3.0-or-later), see [LICENSE](LICENSE).

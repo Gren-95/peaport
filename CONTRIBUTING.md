@@ -33,7 +33,7 @@ CI runs typecheck, unit tests, build, and the E2E suite on every PR.
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`).
 - **Code:** TypeScript, English throughout. Validate all input (zod), keep
   authorization server-side, never log secrets. Page files may only export the
-  Next.js page contract — put shared helpers in `src/lib` or `src/components`.
+  Next.js page contract: put shared helpers in `src/lib` or `src/components`.
 - Keep PRs small and focused; add/adjust tests for behaviour changes.
 
 ## Reporting issues

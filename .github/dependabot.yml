@@ -1,6 +1,8 @@
 version: 2
 updates:
-  - package-ecosystem: npm
+  # bun, not npm: the npm ecosystem updates package.json but not bun.lock,
+  # so every PR failed CI at bun install --frozen-lockfile.
+  - package-ecosystem: bun
     directory: /
     schedule:
       interval: weekly

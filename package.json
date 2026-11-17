@@ -17,13 +17,13 @@
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^13.0.3",
-    "lucide-react": "^1.63.0",
-    "next": "16.4.3",
+    "better-sqlite3": "^13.1.1",
+    "lucide-react": "^1.72.0",
+    "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "swr": "^2.5.1",
-    "ws": "^8.22.0",
+    "ws": "^8.23.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
